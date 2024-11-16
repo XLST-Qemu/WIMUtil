@@ -35,18 +35,20 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Hardcode branch detection based on the known invocation context
-$currentBranch = if ("https://github.com/memstechtips/WIMUtil/raw/dev" -in $hostinvocation.InvocationName) {
-    "dev"
-} elseif ("https://github.com/memstechtips/WIMUtil/raw/main" -in $hostinvocation.InvocationName) {
-    "main"
+# Detect branch from the full URL of the invoked script
+$hostInvocationName = $hostinvocation.InvocationName
+
+if ($hostInvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+    $currentBranch = $matches[1]
+    Write-Host "Branch detected from URL: $currentBranch" -ForegroundColor Green
 } else {
-    "main"  # Default to main if branch cannot be inferred
+    Write-Host "Unable to determine branch. Defaulting to 'main'." -ForegroundColor Yellow
+    $currentBranch = "main"
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
-# Build the configuration URL based on the detected branch
+# Construct configuration URL
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
 Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
@@ -58,6 +60,7 @@ try {
     Write-Host "Failed to load configuration from URL: $configUrl" -ForegroundColor Red
     exit 1
 }
+
 
 # Fetch settings for the current branch or fallback to default
 $branchConfig = $config.$currentBranch
