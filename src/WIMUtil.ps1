@@ -36,7 +36,7 @@ $script:currentScreenIndex = 1
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
 # Detect branch dynamically from the invocation URL
-$currentBranch = "main" # Default fallback branch
+$currentBranch = "dev" # Default fallback branch
 if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
     $currentBranch = $matches[1]
 }
