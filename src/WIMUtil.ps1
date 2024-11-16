@@ -35,10 +35,10 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Detect branch based on runtime URL (hardcoded fallback)
-$currentBranch = if ("https://github.com/memstechtips/WIMUtil/raw/dev" -in $MyInvocation.InvocationName) {
+# Hardcode branch detection based on the known invocation context
+$currentBranch = if ("https://github.com/memstechtips/WIMUtil/raw/dev" -in $hostinvocation.InvocationName) {
     "dev"
-} elseif ("https://github.com/memstechtips/WIMUtil/raw/main" -in $MyInvocation.InvocationName) {
+} elseif ("https://github.com/memstechtips/WIMUtil/raw/main" -in $hostinvocation.InvocationName) {
     "main"
 } else {
     "main"  # Default to main if branch cannot be inferred
@@ -50,7 +50,7 @@ Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
 Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
-# Load the configuration from the URL
+# Load the configuration
 try {
     $config = (Invoke-WebRequest -Uri $configUrl -ErrorAction Stop).Content | ConvertFrom-Json
     Write-Host "Configuration loaded successfully from $configUrl" -ForegroundColor Green
