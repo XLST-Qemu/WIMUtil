@@ -39,18 +39,21 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "
 $currentBranch = "main" # Default fallback branch
 Write-Host "Starting branch detection..." -ForegroundColor Yellow
 
+$matches = $null  # Clear previous match data
+
 try {
     if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
         $currentBranch = $matches[1]
-        Write-Host "Branch detected from InvocationName: $currentBranch" -ForegroundColor Green
+        Write-Host "DEBUG: Branch detected from InvocationName: $currentBranch" -ForegroundColor Green
     } else {
-        Write-Host "Unable to detect branch from InvocationName. Using fallback." -ForegroundColor Red
+        Write-Host "DEBUG: Unable to detect branch from InvocationName. Using fallback." -ForegroundColor Red
     }
 } catch {
-    Write-Host "Error during branch detection: $_" -ForegroundColor Red
+    Write-Host "DEBUG: Error during branch detection: $_" -ForegroundColor Red
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
+Pause
 
 # Construct the configuration URL based on the detected branch
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
