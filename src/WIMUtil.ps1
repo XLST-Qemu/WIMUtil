@@ -69,10 +69,9 @@ if (-not $branchConfig) {
 $xamlUrl = $branchConfig.xamlUrl
 $oscdimgURL = $branchConfig.oscdimgURL
 $expectedHash = $branchConfig.expectedHash
-$expectedSignDate = ([datetime]$branchConfig.expectedSignDate).ToUniversalTime()
 
 # Validate that required keys are present in the configuration
-if (-not ($xamlUrl -and $oscdimgURL -and $expectedHash -and $expectedSignDate)) {
+if (-not ($xamlUrl -and $oscdimgURL -and $expectedHash)) {
     Write-Host "Configuration file is missing required settings. Exiting script." -ForegroundColor Red
     exit 1
 }
