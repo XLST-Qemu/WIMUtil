@@ -492,32 +492,33 @@ if ($readerOperationSuccessful) {
     }
 
     # Function to get the signing date of a file
-    function Get-SignatureDate {
-        param (
-            [string]$filePath
-        )
+function Get-SignatureDate {
+    param (
+        [string]$filePath
+    )
 
-        if (Test-Path -Path $filePath) {
-            try {
-                $signature = Get-AuthenticodeSignature -FilePath $filePath
-                if ($signature.Status -eq 'Valid') {
-                    return $signature.SignerCertificate.NotBefore
-                }
-                else {
-                    Write-Host "The file's digital signature is not valid."
-                    return $null
-                }
+    if (Test-Path -Path $filePath) {
+        try {
+            $signature = Get-AuthenticodeSignature -FilePath $filePath
+            if ($signature.Status -eq 'Valid') {
+                # Convert the signing date to UTC for comparison
+                return $signature.SignerCertificate.NotBefore.ToUniversalTime()
             }
-            catch {
-                Write-Host "Error retrieving the signature date: $_"
+            else {
+                Write-Host "The file's digital signature is not valid."
                 return $null
             }
         }
-        else {
-            Write-Host "File not found at path: $filePath"
+        catch {
+            Write-Host "Error retrieving the signature date: $_"
             return $null
         }
     }
+    else {
+        Write-Host "File not found at path: $filePath"
+        return $null
+    }
+}
 
     # Check if oscdimg exists on the system without checking hash or date
     function CheckOscdimg {
@@ -537,7 +538,7 @@ if ($readerOperationSuccessful) {
         [System.Windows.Forms.Application]::DoEvents()  # Refresh the UI
     }
 
-    # Function to download and validate oscdimg
+# Updated DownloadOscdimg Function
 function DownloadOscdimg {
     SetStatusText -message "Preparing to download oscdimg..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
     [System.Windows.Forms.Application]::DoEvents()
