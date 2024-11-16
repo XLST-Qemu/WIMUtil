@@ -12,35 +12,18 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Load required WPF assemblies
-Add-Type -AssemblyName PresentationFramework
-Add-Type -AssemblyName System.Windows.Forms
-
-# Define global variables
-# Text Colors
-$Script:NeutralColor = "White"
-$Script:SuccessColor = "Green"
-$Script:ErrorColor = "Red"
-
-# Define the helper functions
-function SetStatusText {
-    param (
-        [string]$message,
-        [string]$color,
-        [ref]$textBlock
-    )
-    $textBlock.Value.Text = $message
-    $textBlock.Value.Foreground = $color
-}
-
-$script:currentScreenIndex = 1
+# Debugging output for branch detection
+Write-Host "Invocation Name: $($MyInvocation.InvocationName)" -ForegroundColor Yellow
+Write-Host "PSCommandPath: $($PSCommandPath)" -ForegroundColor Yellow
 
 # Extract the branch from the invocation URL
 $currentBranch = $null
 if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
     $currentBranch = $matches[1]
+    Write-Host "Branch detected from InvocationName: $currentBranch" -ForegroundColor Green
 } elseif ($PSCommandPath -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
     $currentBranch = $matches[1]
+    Write-Host "Branch detected from PSCommandPath: $currentBranch" -ForegroundColor Green
 }
 
 # Fallback if branch is not detected
@@ -51,6 +34,7 @@ if (-not $currentBranch) {
 
 # Build the configuration URL based on the detected branch
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
+Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
 # Load the configuration from the URL
 try {
@@ -60,6 +44,7 @@ try {
     Write-Host "Failed to load configuration from URL: $configUrl" -ForegroundColor Red
     exit 1
 }
+
 
 # Fetch settings for the current branch or fallback to default
 $branchConfig = $config.$currentBranch
