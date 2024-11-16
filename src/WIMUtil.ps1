@@ -37,16 +37,20 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "
 
 # Detect branch dynamically from the invocation URL
 $currentBranch = "main" # Default fallback branch
-Write-Host "Starting branch detection..." -ForegroundColor Yellow
+Write-Host "DEBUG: Starting branch detection..." -ForegroundColor Yellow
 
 $matches = $null  # Clear previous match data
 
 try {
-    if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+    $matches = $null  # Reset matches before running the regex
+    if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
         $currentBranch = $matches[1]
-        Write-Host "DEBUG: Branch detected from InvocationName: $currentBranch" -ForegroundColor Green
+        Write-Host "DEBUG: Branch detected from MyInvocation.InvocationName: $currentBranch" -ForegroundColor Green
+    } elseif ($MyInvocation.Line -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+        $currentBranch = $matches[1]
+        Write-Host "DEBUG: Branch detected from MyInvocation.Line: $currentBranch" -ForegroundColor Green
     } else {
-        Write-Host "DEBUG: Unable to detect branch from InvocationName. Using fallback." -ForegroundColor Red
+        Write-Host "DEBUG: Unable to detect branch. Using fallback to 'main'." -ForegroundColor Red
     }
 } catch {
     Write-Host "DEBUG: Error during branch detection: $_" -ForegroundColor Red
