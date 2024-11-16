@@ -37,8 +37,17 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "
 
 # Detect branch dynamically from the invocation URL
 $currentBranch = "main" # Default fallback branch
-if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-    $currentBranch = $matches[1]
+Write-Host "Starting branch detection..." -ForegroundColor Yellow
+
+try {
+    if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+        $currentBranch = $matches[1]
+        Write-Host "Branch detected from InvocationName: $currentBranch" -ForegroundColor Green
+    } else {
+        Write-Host "Unable to detect branch from InvocationName. Using fallback." -ForegroundColor Red
+    }
+} catch {
+    Write-Host "Error during branch detection: $_" -ForegroundColor Red
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
