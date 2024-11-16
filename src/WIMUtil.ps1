@@ -35,20 +35,15 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Detect branch from the full URL of the invoked script
-$hostInvocationName = $hostinvocation.InvocationName
-
-if ($hostInvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+# Detect branch dynamically from the invocation URL
+$currentBranch = "main" # Default fallback branch
+if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
     $currentBranch = $matches[1]
-    Write-Host "Branch detected from URL: $currentBranch" -ForegroundColor Green
-} else {
-    Write-Host "Unable to determine branch. Defaulting to 'main'." -ForegroundColor Yellow
-    $currentBranch = "main"
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
-# Construct configuration URL
+# Construct the configuration URL based on the detected branch
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
 Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
@@ -61,18 +56,10 @@ try {
     exit 1
 }
 
-
-# Fetch settings for the current branch or fallback to default
+# Fetch settings for the current branch
 $branchConfig = $config.$currentBranch
-
 if (-not $branchConfig) {
-    Write-Host "Branch $currentBranch not found in configuration file. Falling back to default branch." -ForegroundColor Yellow
-    $currentBranch = $config.defaultBranch
-    $branchConfig = $config.$currentBranch
-}
-
-if (-not $branchConfig) {
-    Write-Host "Default branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
+    Write-Host "Branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
     exit 1
 }
 
