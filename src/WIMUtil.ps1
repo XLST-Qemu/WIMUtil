@@ -491,35 +491,6 @@ if ($readerOperationSuccessful) {
         }
     }
 
-    # Function to get the signing date of a file
-function Get-SignatureDate {
-    param (
-        [string]$filePath
-    )
-
-    if (Test-Path -Path $filePath) {
-        try {
-            $signature = Get-AuthenticodeSignature -FilePath $filePath
-            if ($signature.Status -eq 'Valid') {
-                # Convert the signing date to UTC for comparison
-                return $signature.SignerCertificate.NotBefore.ToUniversalTime()
-            }
-            else {
-                Write-Host "The file's digital signature is not valid."
-                return $null
-            }
-        }
-        catch {
-            Write-Host "Error retrieving the signature date: $_"
-            return $null
-        }
-    }
-    else {
-        Write-Host "File not found at path: $filePath"
-        return $null
-    }
-}
-
     # Check if oscdimg exists on the system without checking hash or date
     function CheckOscdimg {
         $oscdimgPath = "C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe"
@@ -538,7 +509,7 @@ function Get-SignatureDate {
         [System.Windows.Forms.Application]::DoEvents()  # Refresh the UI
     }
 
-# Updated DownloadOscdimg Function
+# Function to download and validate oscdimg
 function DownloadOscdimg {
     SetStatusText -message "Preparing to download oscdimg..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
     [System.Windows.Forms.Application]::DoEvents()
@@ -567,29 +538,6 @@ function DownloadOscdimg {
             SetStatusText -message "Hash mismatch! oscdimg may not be from Microsoft." -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
             Write-Host "Expected Hash: $expectedHash"
             Write-Host "Actual Hash: $actualHash"
-            Remove-Item -Path $oscdimgFullPath -Force
-            return
-        }
-
-        # Verify the file's signature date
-        $actualSignDate = Get-SignatureDate -filePath $oscdimgFullPath
-        if ($null -eq $actualSignDate) {
-            SetStatusText -message "Failed to retrieve signature date." -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
-            Remove-Item -Path $oscdimgFullPath -Force
-            return
-        }
-
-        # Safeguard: Check if system clock is correct
-        if ([datetime]::UtcNow -lt $actualSignDate) {
-            SetStatusText -message "System clock might be incorrect. The signing date is in the future!" -color $Script:WarningColor -textBlock ([ref]$CreateISOStatusText)
-            Write-Host "Warning: The system clock may be incorrect. Signing date is in the future!"
-        }
-
-        # Compare signing date
-        if ($actualSignDate -ne $expectedSignDate) {
-            SetStatusText -message "Signature date mismatch! oscdimg may not be from Microsoft." -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
-            Write-Host "Expected Sign Date (UTC): $expectedSignDate"
-            Write-Host "Actual Sign Date (UTC): $actualSignDate"
             Remove-Item -Path $oscdimgFullPath -Force
             return
         }
