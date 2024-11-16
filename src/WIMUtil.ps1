@@ -3,9 +3,8 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     Try {
         Start-Process PowerShell.exe -ArgumentList ("-NoProfile -ExecutionPolicy Bypass -File `"{0}`"" -f $PSCommandPath) -Verb RunAs
         Exit
-    }
-    Catch {
-        Write-Host "Failed to run as Administrator. Please rerun with elevated privileges."
+    } Catch {
+        Write-Host "Failed to run as Administrator. Please rerun with elevated privileges." -ForegroundColor Red
         Exit
     }
 }
@@ -36,10 +35,16 @@ function SetStatusText {
 
 $script:currentScreenIndex = 1
 
-# Detect the branch based on the script URL
+# Extract the branch from the invocation URL
+$currentBranch = $null
 if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
     $currentBranch = $matches[1]
-} else {
+} elseif ($PSCommandPath -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+    $currentBranch = $matches[1]
+}
+
+# Fallback if branch is not detected
+if (-not $currentBranch) {
     Write-Host "Unable to determine branch from script URL. Defaulting to 'main'." -ForegroundColor Yellow
     $currentBranch = "main"
 }
@@ -56,57 +61,32 @@ try {
     exit 1
 }
 
-# Determine the current branch
-function Get-GitBranch {
-    param (
-        [string]$repoPath = (Get-Location)  # Default to the current directory
-    )
+# Fetch settings for the current branch or fallback to default
+$branchConfig = $config.$currentBranch
 
-    try {
-        $headFile = Join-Path -Path $repoPath -ChildPath ".git\HEAD"
-        if (Test-Path $headFile) {
-            $headContent = Get-Content -Path $headFile
-            if ($headContent -match "refs/heads/(.+)$") {
-                return $matches[1]
-            }
-        }
-    } catch {
-        Write-Host "Error determining Git branch: $_" -ForegroundColor Red
-    }
-    # Use "main" as a fallback
-    return $config.defaultBranch
-}
-
-
-# Get the current branch or default
-$currentBranch = Get-GitBranch
-
-# Fetch settings for the current branch
-if ($config.$currentBranch) {
-    $xamlUrl = $config.$currentBranch.xamlUrl
-    $oscdimgURL = $config.$currentBranch.oscdimgURL
-    $expectedHash = $config.$currentBranch.expectedHash
-    $expectedSignDate = ([datetime]$config.$currentBranch.expectedSignDate).ToUniversalTime()
-} else {
+if (-not $branchConfig) {
     Write-Host "Branch $currentBranch not found in configuration file. Falling back to default branch." -ForegroundColor Yellow
     $currentBranch = $config.defaultBranch
-    if ($config.$currentBranch) {
-        $xamlUrl = $config.$currentBranch.xamlUrl
-        $oscdimgURL = $config.$currentBranch.oscdimgURL
-        $expectedHash = $config.$currentBranch.expectedHash
-        $expectedSignDate = ([datetime]$config.$currentBranch.expectedSignDate).ToUniversalTime()
-    } else {
-        Write-Host "Default branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
-        exit 1
-    }
+    $branchConfig = $config.$currentBranch
 }
+
+if (-not $branchConfig) {
+    Write-Host "Default branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
+    exit 1
+}
+
+# Extract configuration settings
+$xamlUrl = $branchConfig.xamlUrl
+$oscdimgURL = $branchConfig.oscdimgURL
+$expectedHash = $branchConfig.expectedHash
+$expectedSignDate = ([datetime]$branchConfig.expectedSignDate).ToUniversalTime()
+
 
 # Validate that required keys are present in the configuration
 if (-not ($xamlUrl -and $oscdimgURL -and $expectedHash -and $expectedSignDate)) {
     Write-Host "Configuration file is missing required settings. Exiting script." -ForegroundColor Red
     exit 1
 }
-
 
 # Load XAML GUI
 try {
