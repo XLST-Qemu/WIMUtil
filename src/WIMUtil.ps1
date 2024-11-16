@@ -35,25 +35,13 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Debugging output for branch detection
-Write-Host "Invocation Name: $($MyInvocation.InvocationName)" -ForegroundColor Yellow
-Write-Host "PSCommandPath: $($PSCommandPath)" -ForegroundColor Yellow
-
-# Extract the branch from the invocation URL or fallback to main
+# Capture the branch name directly from the script URL
 $currentBranch = $null
 
-try {
-    # Check for a remote script URL in $MyInvocation.InvocationName
-    if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-        $currentBranch = $matches[1]
-    }
-
-    # If $currentBranch is still null, check the pipeline input
-    if (-not $currentBranch -and $input -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-        $currentBranch = $matches[1]
-    }
-} catch {
-    Write-Host "Error detecting branch: $($_.Exception.Message)" -ForegroundColor Red
+# If streaming via irm, capture the URL used in the pipeline
+if ($input -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+    $currentBranch = $matches[1]
+    Write-Host "Branch detected from URL: $currentBranch" -ForegroundColor Green
 }
 
 # Fallback to 'main' if branch is not detected
@@ -62,8 +50,8 @@ if (-not $currentBranch) {
     $currentBranch = "main"
 }
 
-# Debugging output
-Write-Host "Detected Branch: $currentBranch" -ForegroundColor Green
+# Debugging output for the detected branch
+Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
 # Build the configuration URL based on the detected branch
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
