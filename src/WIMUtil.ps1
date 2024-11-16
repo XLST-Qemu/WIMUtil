@@ -9,6 +9,29 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     }
 }
 
+# Load required WPF assemblies
+Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName System.Windows.Forms
+
+# Define global variables
+# Text Colors
+$Script:NeutralColor = "White"
+$Script:SuccessColor = "Green"
+$Script:ErrorColor = "Red"
+
+# Define the helper functions
+function SetStatusText {
+    param (
+        [string]$message,
+        [string]$color,
+        [ref]$textBlock
+    )
+    $textBlock.Value.Text = $message
+    $textBlock.Value.Foreground = $color
+}
+
+$script:currentScreenIndex = 1
+
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
@@ -16,21 +39,31 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "
 Write-Host "Invocation Name: $($MyInvocation.InvocationName)" -ForegroundColor Yellow
 Write-Host "PSCommandPath: $($PSCommandPath)" -ForegroundColor Yellow
 
-# Extract the branch from the invocation URL
+# Extract the branch from the invocation URL or fallback to main
 $currentBranch = $null
-if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-    $currentBranch = $matches[1]
-    Write-Host "Branch detected from InvocationName: $currentBranch" -ForegroundColor Green
-} elseif ($PSCommandPath -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-    $currentBranch = $matches[1]
-    Write-Host "Branch detected from PSCommandPath: $currentBranch" -ForegroundColor Green
+
+try {
+    # Check for a remote script URL in $MyInvocation.InvocationName
+    if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+        $currentBranch = $matches[1]
+    }
+
+    # If $currentBranch is still null, check the pipeline input
+    if (-not $currentBranch -and $input -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+        $currentBranch = $matches[1]
+    }
+} catch {
+    Write-Host "Error detecting branch: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Fallback if branch is not detected
+# Fallback to 'main' if branch is not detected
 if (-not $currentBranch) {
-    Write-Host "Unable to determine branch from script URL. Defaulting to 'main'." -ForegroundColor Yellow
+    Write-Host "Unable to determine branch. Defaulting to 'main'." -ForegroundColor Yellow
     $currentBranch = "main"
 }
+
+# Debugging output
+Write-Host "Detected Branch: $currentBranch" -ForegroundColor Green
 
 # Build the configuration URL based on the detected branch
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
@@ -39,12 +72,11 @@ Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 # Load the configuration from the URL
 try {
     $config = (Invoke-WebRequest -Uri $configUrl -ErrorAction Stop).Content | ConvertFrom-Json
-    Write-Host "Configuration loaded successfully from $configUrl"
+    Write-Host "Configuration loaded successfully from $configUrl" -ForegroundColor Green
 } catch {
     Write-Host "Failed to load configuration from URL: $configUrl" -ForegroundColor Red
     exit 1
 }
-
 
 # Fetch settings for the current branch or fallback to default
 $branchConfig = $config.$currentBranch
@@ -65,7 +97,6 @@ $xamlUrl = $branchConfig.xamlUrl
 $oscdimgURL = $branchConfig.oscdimgURL
 $expectedHash = $branchConfig.expectedHash
 $expectedSignDate = ([datetime]$branchConfig.expectedSignDate).ToUniversalTime()
-
 
 # Validate that required keys are present in the configuration
 if (-not ($xamlUrl -and $oscdimgURL -and $expectedHash -and $expectedSignDate)) {
@@ -92,12 +123,11 @@ try {
 
     # Clean up stream
     $xamlStream.Close()
+    Write-Host "XAML GUI loaded successfully." -ForegroundColor Green
 } catch {
     Write-Host "Error loading XAML from URL: $($_.Exception.Message)" -ForegroundColor Red
-    $readerOperationSuccessful = $false
     exit 1
 }
-
 
 # Define the drag behavior for the window
 function Window_MouseLeftButtonDown {
@@ -119,7 +149,6 @@ function Update-ProgressIndicator {
     $ProgressStep3.Fill = if ($currentScreen -ge 3) { "#FFDE00" } else { "#FFEB99" }
     $ProgressStep4.Fill = if ($currentScreen -ge 4) { "#FFDE00" } else { "#FFEB99" }
 }
-
 
 # Check if XAML loaded successfully
 if ($readerOperationSuccessful) {
