@@ -35,18 +35,15 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Parse the branch from the URL used in irm (must pass the branch explicitly in the script URL)
-$irmUrl = $($hostinvocation.InvocationName)
-
-if ($irmUrl -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-    $currentBranch = $matches[1]
-    Write-Host "Branch detected from irm URL: $currentBranch" -ForegroundColor Green
+# Detect branch based on runtime URL (hardcoded fallback)
+$currentBranch = if ("https://github.com/memstechtips/WIMUtil/raw/dev" -in $MyInvocation.InvocationName) {
+    "dev"
+} elseif ("https://github.com/memstechtips/WIMUtil/raw/main" -in $MyInvocation.InvocationName) {
+    "main"
 } else {
-    Write-Host "Unable to determine branch. Defaulting to 'main'." -ForegroundColor Yellow
-    $currentBranch = "main"
+    "main"  # Default to main if branch cannot be inferred
 }
 
-# Debugging output for the detected branch
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
 # Build the configuration URL based on the detected branch
