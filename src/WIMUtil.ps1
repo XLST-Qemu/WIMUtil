@@ -36,14 +36,23 @@ function SetStatusText {
 
 $script:currentScreenIndex = 1
 
-# Define the path to the configuration file
-$configFilePath = Join-Path -Path (Split-Path -Parent $MyInvocation.MyCommand.Path) -ChildPath "..\config\wimutil-settings.json"
-
-# Load the configuration
-if (Test-Path -Path $configFilePath) {
-    $config = Get-Content -Path $configFilePath | ConvertFrom-Json
+# Detect the branch based on the script URL
+if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+    $currentBranch = $matches[1]
 } else {
-    Write-Host "Configuration file not found: $configFilePath" -ForegroundColor Red
+    Write-Host "Unable to determine branch from script URL. Defaulting to 'main'." -ForegroundColor Yellow
+    $currentBranch = "main"
+}
+
+# Build the configuration URL based on the detected branch
+$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
+
+# Load the configuration from the URL
+try {
+    $config = (Invoke-WebRequest -Uri $configUrl -ErrorAction Stop).Content | ConvertFrom-Json
+    Write-Host "Configuration loaded successfully from $configUrl"
+} catch {
+    Write-Host "Failed to load configuration from URL: $configUrl" -ForegroundColor Red
     exit 1
 }
 
@@ -64,8 +73,10 @@ function Get-GitBranch {
     } catch {
         Write-Host "Error determining Git branch: $_" -ForegroundColor Red
     }
-    return $config.defaultBranch  # Fallback to the default branch
+    # Use "main" as a fallback
+    return $config.defaultBranch
 }
+
 
 # Get the current branch or default
 $currentBranch = Get-GitBranch
@@ -79,28 +90,47 @@ if ($config.$currentBranch) {
 } else {
     Write-Host "Branch $currentBranch not found in configuration file. Falling back to default branch." -ForegroundColor Yellow
     $currentBranch = $config.defaultBranch
-    $xamlUrl = $config.$currentBranch.xamlUrl
-    $oscdimgURL = $config.$currentBranch.oscdimgURL
-    $expectedHash = $config.$currentBranch.expectedHash
-    $expectedSignDate = ([datetime]$config.$currentBranch.expectedSignDate).ToUniversalTime()
+    if ($config.$currentBranch) {
+        $xamlUrl = $config.$currentBranch.xamlUrl
+        $oscdimgURL = $config.$currentBranch.oscdimgURL
+        $expectedHash = $config.$currentBranch.expectedHash
+        $expectedSignDate = ([datetime]$config.$currentBranch.expectedSignDate).ToUniversalTime()
+    } else {
+        Write-Host "Default branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
+        exit 1
+    }
+}
+
+# Validate that required keys are present in the configuration
+if (-not ($xamlUrl -and $oscdimgURL -and $expectedHash -and $expectedSignDate)) {
+    Write-Host "Configuration file is missing required settings. Exiting script." -ForegroundColor Red
+    exit 1
 }
 
 
 # Load XAML GUI
 try {
-    # Load XAML from the dynamically loaded URL
-    $xamlContent = (Invoke-WebRequest -Uri $xamlUrl).Content
+    if (-not $xamlUrl) {
+        throw "XAML URL is not set in the configuration."
+    }
+    # Download XAML content as a string
+    $xamlContent = (Invoke-WebRequest -Uri $xamlUrl -ErrorAction Stop).Content
 
     # Load the XAML using XamlReader.Load with a MemoryStream
     $encoding = [System.Text.Encoding]::UTF8
     $xamlBytes = $encoding.GetBytes($xamlContent)
     $xamlStream = [System.IO.MemoryStream]::new($xamlBytes)
+
+    # Parse the XAML content
     $window = [System.Windows.Markup.XamlReader]::Load($xamlStream)
     $readerOperationSuccessful = $true
+
+    # Clean up stream
     $xamlStream.Close()
 } catch {
-    Write-Host "Error loading XAML from URL: $xamlUrl" -ForegroundColor Red
+    Write-Host "Error loading XAML from URL: $($_.Exception.Message)" -ForegroundColor Red
     $readerOperationSuccessful = $false
+    exit 1
 }
 
 
