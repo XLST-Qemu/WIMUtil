@@ -44,15 +44,13 @@ function Get-LaunchBranch {
     $parentCmd = Get-WmiObject Win32_Process -Filter "ProcessId = $parentProcess" |
         Select-Object -ExpandProperty CommandLine
     
-    # Debug output to see what we're working with
-    Write-Host "Parent Command: $parentCmd" -ForegroundColor Yellow
+    Write-Host "Debug: Full parent command: $parentCmd" -ForegroundColor Yellow
     
-    # Check if launched via IRM and extract branch
-    if ($parentCmd -match "powershell|pwsh|WindowsTerminal") {
-        if ($parentCmd -match "WIMUtil/raw/(main|dev)/") {
-            Write-Host "Branch detected from URL: $($matches[1])" -ForegroundColor Yellow
-            return $matches[1]  # Returns 'main' or 'dev'
-        }
+    # Modified pattern matching
+    if ($parentCmd -match '"https://github\.com/memstechtips/WIMUtil/raw/(main|dev)/.+"') {
+        Write-Host "Debug: URL match found" -ForegroundColor Green
+        Write-Host "Debug: Branch detected: $($matches[1])" -ForegroundColor Green
+        return $matches[1]
     }
     
     # If command line argument is provided
@@ -60,8 +58,8 @@ function Get-LaunchBranch {
         return $args[1]
     }
     
-    Write-Host "No branch detected, defaulting to main" -ForegroundColor Yellow
-    return "main"  # Default to main branch
+    Write-Host "Debug: No branch detected, defaulting to main" -ForegroundColor Yellow
+    return "main"
 }
 
 # Detect branch dynamically
