@@ -489,7 +489,7 @@ if ($readerOperationSuccessful) {
     function AddDriversToImage {
         param (
             [string]$ExportDir = "C:\WIMUtil\ExportedDrivers",
-            [string]$ImageFile = "C:\WIMUtil\install.esd",
+            [string]$ImageFile = "C:\WIMUtil\sources\install.esd",
             [string]$MountDir = "C:\WIMUtil\Mount"
         )
     
