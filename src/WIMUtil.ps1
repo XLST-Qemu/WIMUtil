@@ -1,8 +1,3 @@
-$script:launchUrl = $null
-if ($MyInvocation.MyCommand.ScriptBlock.Module.SessionState.PSVariable.Get("__irm_url")) {
-    $script:launchUrl = $MyInvocation.MyCommand.ScriptBlock.Module.SessionState.PSVariable.Get("__irm_url").Value
-}
-
 # Check if script is running as Administrator
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")) {
     Try {
@@ -46,15 +41,20 @@ $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/dev/config/
 
 Write-Host "Using Configuration URL: $configUrl" -ForegroundColor Yellow
 
+# Detect branch based on the script URL
 $currentBranch = "unknown"  # Default value
+Write-Host "DEBUG: Script URL: $scriptUrl" -ForegroundColor Magenta
 
-if ($scriptUrl -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+if ($scriptUrl -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/src/WIMUtil.ps1") {
     $currentBranch = $matches[1]
+    Write-Host "DEBUG: Branch detected from URL: $currentBranch" -ForegroundColor Green
+} else {
+    Write-Host "DEBUG: Regex did not match. Using fallback." -ForegroundColor Yellow
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
-# Construct the configuration URL based on the detected branch
+# Construct the configuration URL
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
 Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
@@ -69,7 +69,6 @@ try {
 
 # Fetch settings for the current branch
 $branchConfig = $config.$currentBranch
-
 if (-not $branchConfig) {
     Write-Host "Branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
     exit 1
