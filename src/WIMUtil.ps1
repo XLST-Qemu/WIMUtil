@@ -39,26 +39,20 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "
 # $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/main/config/wimutil-settings.json"  # Main branch
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/dev/config/wimutil-settings.json"   # Dev branch
 
-Write-Host "Using Configuration URL: $configUrl" -ForegroundColor Yellow
+Write-Host "Using Configuration URL: $configUrl" -ForegroundColor Cyan
 
-# Detect branch based on the script URL
-$currentBranch = "unknown"  # Default value
-Write-Host "DEBUG: Script URL: $scriptUrl" -ForegroundColor Magenta
-
-if ($scriptUrl -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/src/WIMUtil.ps1") {
+# Determine branch from the configuration URL
+$currentBranch = "unknown"  # Fallback value
+if ($configUrl -match "https://raw.githubusercontent.com/memstechtips/WIMUtil/([^/]+)/config/wimutil-settings.json") {
     $currentBranch = $matches[1]
-    Write-Host "DEBUG: Branch detected from URL: $currentBranch" -ForegroundColor Green
+    Write-Host "Branch detected from Configuration URL: $currentBranch" -ForegroundColor Green
 } else {
-    Write-Host "DEBUG: Regex did not match. Using fallback." -ForegroundColor Yellow
+    Write-Host "Unable to detect branch from Configuration URL. Using fallback." -ForegroundColor Yellow
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
-# Construct the configuration URL
-$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
-Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
-
-# Load the configuration from the URL
+# Load the configuration from the specified URL
 try {
     $config = (Invoke-WebRequest -Uri $configUrl -ErrorAction Stop).Content | ConvertFrom-Json
     Write-Host "Configuration loaded successfully from $configUrl" -ForegroundColor Green
@@ -74,8 +68,7 @@ if (-not $branchConfig) {
     exit 1
 }
 
-# Debugging output
-Write-Host "Branch settings loaded for: $currentBranch" -ForegroundColor Cyan
+Write-Host "Branch settings successfully loaded for: $currentBranch" -ForegroundColor Cyan
 
 # Extract configuration settings
 $xamlUrl = $branchConfig.xamlUrl
