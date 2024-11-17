@@ -40,27 +40,18 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Function to determine which branch was used to launch the script
-function Get-LaunchBranch {
-    Write-Host "Debug: Launch URL: $script:launchUrl" -ForegroundColor Yellow
-    
-    # First try from stored URL
-    if ($script:launchUrl -match 'WIMUtil/raw/(main|dev)/') {
-        Write-Host "Debug: Branch detected from stored URL: $($matches[1])" -ForegroundColor Green
-        return $matches[1]
-    }
-    
-    # If command line argument is provided
-    if ($args.Count -gt 0 -and $args[0] -eq "-Branch") {
-        return $args[1]
-    }
-    
-    Write-Host "Debug: No branch detected, defaulting to main" -ForegroundColor Yellow
-    return "main"
+# Explicitly define the configuration URL for the branch to use
+# $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/main/config/wimutil-settings.json"  # Main branch
+$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/dev/config/wimutil-settings.json"   # Dev branch
+
+Write-Host "Using Configuration URL: $configUrl" -ForegroundColor Yellow
+
+$currentBranch = "unknown"  # Default value
+
+if ($scriptUrl -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+    $currentBranch = $matches[1]
 }
 
-# Detect branch dynamically
-$currentBranch = Get-LaunchBranch
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
 # Construct the configuration URL based on the detected branch
@@ -78,10 +69,14 @@ try {
 
 # Fetch settings for the current branch
 $branchConfig = $config.$currentBranch
+
 if (-not $branchConfig) {
     Write-Host "Branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
     exit 1
 }
+
+# Debugging output
+Write-Host "Branch settings loaded for: $currentBranch" -ForegroundColor Cyan
 
 # Extract configuration settings
 $xamlUrl = $branchConfig.xamlUrl
