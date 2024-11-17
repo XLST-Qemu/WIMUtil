@@ -1,3 +1,8 @@
+$script:launchUrl = $null
+if ($MyInvocation.MyCommand.ScriptBlock.Module.SessionState.PSVariable.Get("__irm_url")) {
+    $script:launchUrl = $MyInvocation.MyCommand.ScriptBlock.Module.SessionState.PSVariable.Get("__irm_url").Value
+}
+
 # Check if script is running as Administrator
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")) {
     Try {
@@ -37,14 +42,11 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "
 
 # Function to determine which branch was used to launch the script
 function Get-LaunchBranch {
-    Write-Host "Debug: MyInvocation Line: $($MyInvocation.Line)" -ForegroundColor Yellow
-    Write-Host "Debug: MyInvocation Command: $($MyInvocation.MyCommand)" -ForegroundColor Yellow
+    Write-Host "Debug: Launch URL: $script:launchUrl" -ForegroundColor Yellow
     
-    $commandLine = $MyInvocation.Line
-    
-    if ($commandLine -match 'WIMUtil/raw/(main|dev)/') {
-        Write-Host "Debug: URL match found" -ForegroundColor Green
-        Write-Host "Debug: Branch detected: $($matches[1])" -ForegroundColor Green
+    # First try from stored URL
+    if ($script:launchUrl -match 'WIMUtil/raw/(main|dev)/') {
+        Write-Host "Debug: Branch detected from stored URL: $($matches[1])" -ForegroundColor Green
         return $matches[1]
     }
     
