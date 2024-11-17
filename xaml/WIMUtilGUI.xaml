@@ -301,11 +301,11 @@
 
                             <!-- Option 1: Add Drivers from Current Windows Installation in a Box -->
                             <DockPanel HorizontalAlignment="Left" LastChildFill="True" Margin="0,20,0,0" Width="585">
-                                <TextBox x:Name="AddCurrentDriversTextBox" Text=" Extract and Add Drivers from Current Windows Installation"
+                                <TextBox x:Name="AddDriversToImageTextBox" Text=" Extract and Add Drivers from Current Windows Installation"
                      VerticalContentAlignment="Center" Foreground="LightGray" FontStyle="Italic" 
                      Background="#404040" BorderBrush="#606060" Height="30" Width="450" 
                      Margin="0,0,10,0" IsReadOnly="True"/>
-                                <Button x:Name="AddCurrentDriversButton" Content="Add Drivers" FontWeight="SemiBold"
+                                <Button x:Name="AddDriversToImageButton" Content="Add Drivers" FontWeight="SemiBold"
                     Width="125" Height="30" Style="{StaticResource PrimaryButtonStyle}"
                     HorizontalAlignment="Right" VerticalAlignment="Center"/>
                             </DockPanel>

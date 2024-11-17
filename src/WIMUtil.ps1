@@ -36,8 +36,8 @@ $script:currentScreenIndex = 1
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
 # Explicitly define the configuration URL for the branch to use (commenting out the one not to use depending on branch)
-$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/main/config/wimutil-settings.json"  # Main branch
-# $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/dev/config/wimutil-settings.json"   # Dev branch
+# $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/main/config/wimutil-settings.json"  # Main branch
+$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/dev/config/wimutil-settings.json"   # Dev branch
 
 Write-Host "Using Configuration URL: $configUrl" -ForegroundColor Cyan
 
@@ -153,9 +153,9 @@ if ($readerOperationSuccessful) {
     $DownloadUWXMLButton = $window.FindName("DownloadUWXMLButton")
     $SelectXMLFileButton = $window.FindName("SelectXMLFileButton")
     $AddDriversStatusText = $window.FindName("AddDriversStatusText")
-    $AddCurrentDriversButton = $window.FindName("AddCurrentDriversButton")
+    $AddDriversToImageButton = $window.FindName("AddDriversToImageButton")
     $AddRecDriversButton = $window.FindName("AddRecDriversButton")
-    $AddCurrentDriversTextBox = $window.FindName("AddCurrentDriversTextBox")
+    $AddDriversToImageTextBox = $window.FindName("AddDriversToImageTextBox")
     $AddRecDriversTextBox = $window.FindName("AddRecDriversTextBox")
     $CreateISOStatusText = $window.FindName("CreateISOStatusText")
     $GetoscdimgButton = $window.FindName("GetoscdimgButton")
@@ -262,7 +262,7 @@ if ($readerOperationSuccessful) {
     # Function to extract ISO
     function ExtractISO {
         $drive = Get-PSDrive -Name C
-        $requiredSpace = 5GB
+        $requiredSpace = 15GB
         if ($drive.Free -gt $requiredSpace) {
             SetStatusText -message "Sufficient space available. Preparing working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
             [System.Windows.Forms.Application]::DoEvents()
@@ -399,37 +399,136 @@ if ($readerOperationSuccessful) {
     }
     
 
-
-    function AddCurrentDrivers {
-        SetStatusText -message "Checking for driver directory..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        [System.Windows.Forms.Application]::DoEvents()
+    function ConvertEsdToWim {
+        param (
+            [string]$ImageFile  # Path to the image file (WIM or ESD)
+        )
     
-        # Define driver directory with escaped $ symbols
-        $winpeDriverDir = "C:\WIMUtil\`$WinpeDriver`$"
-    
-        # Check if the directory exists; if not, create it
-        if (!(Test-Path -Path $winpeDriverDir)) {
-            New-Item -ItemType Directory -Path $winpeDriverDir | Out-Null
-            SetStatusText -message "Created driver directory: $winpeDriverDir" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+        if ($ImageFile -like "*.esd") {
+            $convertedWimFile = [System.IO.Path]::ChangeExtension($ImageFile, ".wim")
+            SetStatusText -message "Detected .esd file. Converting to .wim: $convertedWimFile" -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
             [System.Windows.Forms.Application]::DoEvents()
+    
+            try {
+                Start-Process -FilePath "dism" -ArgumentList "/export-image /sourceimagefile:$ImageFile /sourceindex:1 /destinationimagefile:$convertedWimFile /compress:max /checkintegrity" -NoNewWindow -Wait
+                SetStatusText -message "Conversion to .wim completed successfully: $convertedWimFile" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+                [System.Windows.Forms.Application]::DoEvents()
+                return $convertedWimFile
+            }
+            catch {
+                SetStatusText -message "Error converting .esd to .wim: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+                return $null
+            }
+        }
+        else {
+            # If it's already a WIM file, return it as-is
+            return $ImageFile
+        }
+    }
+    
+    function MountWimImage {
+        param (
+            [string]$WimFile,   # Path to the WIM file
+            [string]$MountDir   # Path to the mount directory
+        )
+    
+        if (!(Test-Path -Path $MountDir)) {
+            New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
         }
     
-        # Export drivers using DISM
         try {
-            SetStatusText -message "Exporting current drivers to $winpeDriverDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-            SetStatusText -message "Drivers from current installation added successfully." -color $Script:NeutralColor -textBlock ([ref]$AddCurrentDriversTextBox)
+            SetStatusText -message "Mounting WIM image: $WimFile to $MountDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Start-Process -FilePath "dism" -ArgumentList "/mount-wim /wimfile:$WimFile /index:1 /mountdir:$MountDir" -NoNewWindow -Wait
+            SetStatusText -message "WIM image mounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             [System.Windows.Forms.Application]::DoEvents()
-            
-            Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$winpeDriverDir" -NoNewWindow -Wait
+            return $true
+        }
+        catch {
+            SetStatusText -message "Error mounting WIM image: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return $false
+        }
+    }
+
+    function AddDriversToDriverStore {
+        param (
+            [string]$DriverPath,  # Path to the exported drivers
+            [string]$MountDir     # Path to the mounted WIM directory
+        )
     
+        try {
+            SetStatusText -message "Adding drivers from $DriverPath to the Driver Store in $MountDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Start-Process -FilePath "dism" -ArgumentList "/image:$MountDir /add-driver /driver:$DriverPath /recurse" -NoNewWindow -Wait
+            SetStatusText -message "Drivers added to the Driver Store successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            [System.Windows.Forms.Application]::DoEvents()
+            return $true
+        }
+        catch {
+            SetStatusText -message "Error adding drivers to the Driver Store: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return $false
+        }
+    }
+
+    function CommitAndUnmountWim {
+        param (
+            [string]$MountDir   # Path to the mount directory
+        )
+    
+        try {
+            SetStatusText -message "Committing changes and unmounting WIM image..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Start-Process -FilePath "dism" -ArgumentList "/unmount-wim /mountdir:$MountDir /commit" -NoNewWindow -Wait
+            SetStatusText -message "WIM image unmounted and changes committed successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            [System.Windows.Forms.Application]::DoEvents()
+            return $true
+        }
+        catch {
+            SetStatusText -message "Error unmounting WIM image: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return $false
+        }
+    }
+    
+    function AddDriversToImage {
+        param (
+            [string]$ExportDir = "C:\WIMUtil\ExportedDrivers",
+            [string]$ImageFile = "C:\WIMUtil\install.esd",
+            [string]$MountDir = "C:\WIMUtil\Mount"
+        )
+    
+        # Step 1: Check and convert .esd to .wim if necessary
+        $ImageFile = ConvertEsdToWim -ImageFile $ImageFile
+        if (-not $ImageFile) {
+            return
+        }
+    
+        # Step 2: Export current system drivers
+        if (!(Test-Path -Path $ExportDir)) {
+            New-Item -ItemType Directory -Path $ExportDir -Force | Out-Null
+        }
+    
+        try {
+            SetStatusText -message "Exporting drivers from current system to $ExportDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$ExportDir" -NoNewWindow -Wait
             SetStatusText -message "Driver export completed successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             [System.Windows.Forms.Application]::DoEvents()
         }
         catch {
             SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            return
         }
+    
+        # Step 3: Mount the WIM image
+        if (-not (MountWimImage -WimFile $ImageFile -MountDir $MountDir)) {
+            return
+        }
+    
+        # Step 4: Add drivers to the mounted WIM image
+        if (-not (AddDriversToDriverStore -DriverPath $ExportDir -MountDir $MountDir)) {
+            return
+        }
+    
+        # Step 5: Commit changes and unmount the WIM image
+        CommitAndUnmountWim -MountDir $MountDir
     }
+    
     
     function AddRecommendedDrivers {
         SetStatusText -message "Checking for driver directory..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
@@ -613,7 +712,7 @@ function DownloadOscdimg {
     $CloseButton.Add_Click({ Close_Click })
     $DownloadUWXMLButton.Add_Click({ DownloadUWXML })
     $SelectXMLFileButton.Add_Click({ SelectXMLFile })
-    $AddCurrentDriversButton.Add_Click({ AddCurrentDrivers })
+    $AddDriversToImageButton.Add_Click({ AddDriversToImage })
     $AddRecDriversButton.Add_Click({ AddRecommendedDrivers })
     $GetoscdimgButton.Add_Click({ DownloadOscdimg })
     $SelectISOLocationButton.Add_Click({ SelectNewISOLocation })
