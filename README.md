@@ -10,11 +10,11 @@ Contributions to this project are welcome! However, please understand that I pre
 - **Create New ISO File** with [`oscdimg.exe`](https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/oscdimg-command-line-options) 
 
 > [!NOTE]
-> This tool is currently in alpha (v0.0.1), and it's a work in progress. Any issues can be reported using the Issues tab.
+> This tool is currently in alpha, and it's a work in progress. Any issues can be reported using the Issues tab.
 
 ### Versions
 
-[![Latest Version](https://img.shields.io/badge/Version-0.0.1Alpha%20Latest-0078D4?style=for-the-badge&logo=github&logoColor=white)](https://github.com/memstechtips/WIMUtil/releases/tag/v0.0.1)
+[![Latest Version](https://img.shields.io/badge/Version-0.0.2Alpha%20Latest-0078D4?style=for-the-badge&logo=github&logoColor=white)](https://github.com/memstechtips/WIMUtil/releases/tag/v0.0.2)
 
 ### Support the Project
 
@@ -46,7 +46,7 @@ To use **WIMUtil**, follow these steps to launch PowerShell as an Administrator 
 3. **Paste and Run the Command**:
    - Copy the following command:
      ```powershell
-     irm "https://github.com/memstechtips/WIMUtil/raw/main/src/WIMUtil.ps1" | iex 
+     irm "https://github.com/memstechtips/WIMUtil/raw/main/src/WIMUtil.ps1" | iex
      ```
    - To paste into PowerShell, **Right-Click** or press **Ctrl + V** in the PowerShell or Terminal window. </br> This should automatically paste your copied command.
    - Press **Enter** to execute the command.
