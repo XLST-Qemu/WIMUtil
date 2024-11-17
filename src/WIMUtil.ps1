@@ -35,21 +35,15 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Detect branch dynamically from the invocation URL
-$currentBranch = "main"  # Default branch
-if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-    $currentBranch = $matches[1]
-} elseif ($args.Count -gt 0 -and $args[0] -eq "-Branch") {
-    $currentBranch = $args[1]
-}
+# Explicitly define the configuration URLs for main and dev branches
 
-Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
+# $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/main/config/wimutil-settings.json"  # Main branch
+$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/dev/config/wimutil-settings.json"   # Dev branch
 
-# Construct the configuration URL based on the detected branch
-$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
-Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
+# Debugging information
+Write-Host "Using configuration URL: $configUrl" -ForegroundColor Yellow
 
-# Load the configuration from the URL
+# Load the configuration from the selected URL
 try {
     $config = (Invoke-WebRequest -Uri $configUrl -ErrorAction Stop).Content | ConvertFrom-Json
     Write-Host "Configuration loaded successfully from $configUrl" -ForegroundColor Green
@@ -59,11 +53,17 @@ try {
 }
 
 # Fetch settings for the current branch
+# Assuming branch-specific configuration keys (like "main" or "dev") are present in the JSON
+$currentBranch = if ($config.main) { "main" } elseif ($config.dev) { "dev" } else { "unknown" }
 $branchConfig = $config.$currentBranch
+
 if (-not $branchConfig) {
     Write-Host "Branch $currentBranch not found in configuration file. Exiting script." -ForegroundColor Red
     exit 1
 }
+
+# Debugging information
+Write-Host "Branch settings loaded for: $currentBranch" -ForegroundColor Cyan
 
 # Extract configuration settings
 $xamlUrl = $branchConfig.xamlUrl
