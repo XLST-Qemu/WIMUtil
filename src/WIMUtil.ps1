@@ -37,17 +37,14 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "
 
 # Function to determine which branch was used to launch the script
 function Get-LaunchBranch {
-    $currentPID = $PID
-    $parentProcess = Get-WmiObject Win32_Process -Filter "ProcessId = $currentPID" | 
-        Select-Object -ExpandProperty ParentProcessId
-    
-    $parentCmd = Get-WmiObject Win32_Process -Filter "ProcessId = $parentProcess" |
+    # Get the current process's command line
+    $currentCmd = Get-WmiObject Win32_Process -Filter "ProcessId = $PID" |
         Select-Object -ExpandProperty CommandLine
     
-    Write-Host "Debug: Full parent command: $parentCmd" -ForegroundColor Yellow
+    Write-Host "Debug: Full command: $currentCmd" -ForegroundColor Yellow
     
     # Modified pattern matching
-    if ($parentCmd -match '"https://github\.com/memstechtips/WIMUtil/raw/(main|dev)/.+"') {
+    if ($currentCmd -match 'WIMUtil/raw/(main|dev)/') {
         Write-Host "Debug: URL match found" -ForegroundColor Green
         Write-Host "Debug: Branch detected: $($matches[1])" -ForegroundColor Green
         return $matches[1]
