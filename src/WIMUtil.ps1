@@ -1,5 +1,4 @@
 # Script Parameters
-
 param (
     [string]$Branch = "main" # Default branch is main unless overridden
 )
@@ -41,11 +40,16 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Write debug information about the branch
-Write-Host "DEBUG: Detected branch parameter: $Branch" -ForegroundColor Magenta
+# Detect branch dynamically or through parameters
+$currentBranch = "main" # Default branch is main
 
-# Set the branch based on the -branch parameter
-$currentBranch = $Branch
+# Check if script is run directly with a parameter
+if ($PSBoundParameters.ContainsKey("Branch")) {
+    $currentBranch = $Branch
+} elseif ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+    $currentBranch = $matches[1]
+}
+
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
 # Construct the configuration URL based on the branch
@@ -60,6 +64,7 @@ try {
     Write-Host "Failed to load configuration from URL: $configUrl" -ForegroundColor Red
     exit 1
 }
+
 
 # Fetch settings for the current branch
 $branchConfig = $config.$currentBranch
