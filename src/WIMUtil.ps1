@@ -1,8 +1,3 @@
-# Script Parameters
-param (
-    [string]$Branch = "main" # Default branch is main unless overridden
-)
-
 # Check if script is running as Administrator
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")) {
     Try {
@@ -40,19 +35,17 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Detect branch dynamically or through parameters
-$currentBranch = "main" # Default branch is main
-
-# Check if script is run directly with a parameter
-if ($PSBoundParameters.ContainsKey("Branch")) {
-    $currentBranch = $Branch
-} elseif ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
+# Detect branch dynamically from the invocation URL
+$currentBranch = "main"  # Default branch
+if ($hostinvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
     $currentBranch = $matches[1]
+} elseif ($args.Count -gt 0 -and $args[0] -eq "-Branch") {
+    $currentBranch = $args[1]
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 
-# Construct the configuration URL based on the branch
+# Construct the configuration URL based on the detected branch
 $configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
 Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
@@ -64,7 +57,6 @@ try {
     Write-Host "Failed to load configuration from URL: $configUrl" -ForegroundColor Red
     exit 1
 }
-
 
 # Fetch settings for the current branch
 $branchConfig = $config.$currentBranch
