@@ -1,3 +1,9 @@
+# Script Parameters
+
+param (
+    [string]$Branch = "main" # Default branch is main unless overridden
+)
+
 # Check if script is running as Administrator
 If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")) {
     Try {
@@ -34,10 +40,6 @@ $script:currentScreenIndex = 1
 
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
-
-param (
-    [string]$Branch = "main" # Default branch is main unless overridden
-)
 
 # Write debug information about the branch
 Write-Host "DEBUG: Detected branch parameter: $Branch" -ForegroundColor Magenta
