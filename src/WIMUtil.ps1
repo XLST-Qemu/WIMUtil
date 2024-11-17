@@ -35,32 +35,51 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Detect branch dynamically from the invocation URL
-$currentBranch = "main" # Default fallback branch
-Write-Host "DEBUG: Starting branch detection..." -ForegroundColor Yellow
+# Define the URLs for dev and main branches
+$devUrl = "https://github.com/memstechtips/WIMUtil/raw/dev/src/WIMUtil.ps1"
+$mainUrl = "https://github.com/memstechtips/WIMUtil/raw/main/src/WIMUtil.ps1"
 
-$matches = $null  # Clear previous match data
+# Default to main branch
+$currentBranch = "main"
 
-try {
-    $matches = $null  # Reset matches before running the regex
-    if ($MyInvocation.InvocationName -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-        $currentBranch = $matches[1]
-        Write-Host "DEBUG: Branch detected from MyInvocation.InvocationName: $currentBranch" -ForegroundColor Green
-    } elseif ($MyInvocation.Line -match "https://github.com/memstechtips/WIMUtil/raw/([^/]+)/") {
-        $currentBranch = $matches[1]
-        Write-Host "DEBUG: Branch detected from MyInvocation.Line: $currentBranch" -ForegroundColor Green
+# Function to check invocation URL against predefined URLs
+function DetectBranch {
+    param (
+        [string]$InvocationName
+    )
+
+    if ($InvocationName -eq $devUrl) {
+        return "dev"
+    } elseif ($InvocationName -eq $mainUrl) {
+        return "main"
     } else {
-        Write-Host "DEBUG: Unable to detect branch. Using fallback to 'main'." -ForegroundColor Red
+        return $null
     }
-} catch {
-    Write-Host "DEBUG: Error during branch detection: $_" -ForegroundColor Red
+}
+
+# Attempt to detect the branch from MyInvocation
+if ($MyInvocation -and $MyInvocation.InvocationName) {
+    $currentBranch = DetectBranch -InvocationName $MyInvocation.InvocationName
+}
+
+# Fallback to HostInvocation if MyInvocation didn't detect the branch
+if (-not $currentBranch -or $currentBranch -eq $null) {
+    if ($hostinvocation -and $hostinvocation.InvocationName) {
+        $currentBranch = DetectBranch -InvocationName $hostinvocation.InvocationName
+    }
+}
+
+# If still not detected, use the default branch
+if (-not $currentBranch -or $currentBranch -eq $null) {
+    Write-Host "DEBUG: Unable to detect branch from InvocationName. Using fallback to 'main'." -ForegroundColor Yellow
+    $currentBranch = "main"
 }
 
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 Pause
 
 # Construct the configuration URL based on the detected branch
-$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
+$configUrl = "https://github.com/memstechtips/WIMUtil/raw/$currentBranch/config/wimutil-settings.json"
 Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
 # Load the configuration
