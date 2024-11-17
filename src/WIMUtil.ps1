@@ -493,40 +493,78 @@ if ($readerOperationSuccessful) {
             [string]$MountDir = "C:\WIMUtil\Mount"
         )
     
+        Write-Host "Starting AddDriversToImage process..." -ForegroundColor $Script:NeutralColor
+    
         # Step 1: Check and convert .esd to .wim if necessary
+        Write-Host "Step 1: Checking if ImageFile needs conversion from .esd to .wim..." -ForegroundColor $Script:NeutralColor
+        SetStatusText -message "Step 1: Checking and converting ImageFile if needed..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
         $ImageFile = ConvertEsdToWim -ImageFile $ImageFile
         if (-not $ImageFile) {
+            Write-Host "Error: ImageFile conversion failed. Aborting process." -ForegroundColor $Script:ErrorColor
+            SetStatusText -message "Error: ImageFile conversion failed." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
+        Write-Host "ImageFile is ready: $ImageFile" -ForegroundColor $Script:SuccessColor
+        SetStatusText -message "Step 1 completed: ImageFile is ready: $ImageFile" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
         # Step 2: Export current system drivers
+        Write-Host "Step 2: Exporting current system drivers to $ExportDir..." -ForegroundColor $Script:NeutralColor
+        SetStatusText -message "Step 2: Exporting current system drivers..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
         if (!(Test-Path -Path $ExportDir)) {
+            Write-Host "Export directory not found. Creating $ExportDir..." -ForegroundColor $Script:NeutralColor
             New-Item -ItemType Directory -Path $ExportDir -Force | Out-Null
         }
     
         try {
-            SetStatusText -message "Exporting drivers from current system to $ExportDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$ExportDir" -NoNewWindow -Wait
-            SetStatusText -message "Driver export completed successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            Write-Host "Drivers exported successfully to $ExportDir" -ForegroundColor $Script:SuccessColor
+            SetStatusText -message "Step 2 completed: Drivers exported successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
         }
         catch {
-            SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Failed to export drivers. $_" -ForegroundColor $Script:ErrorColor
+            SetStatusText -message "Error: Failed to export drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
     
         # Step 3: Mount the WIM image
+        Write-Host "Step 3: Mounting the WIM image at $MountDir..." -ForegroundColor $Script:NeutralColor
+        SetStatusText -message "Step 3: Mounting the WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
         if (-not (MountWimImage -WimFile $ImageFile -MountDir $MountDir)) {
+            Write-Host "Error: Failed to mount WIM image." -ForegroundColor $Script:ErrorColor
+            SetStatusText -message "Error: Failed to mount WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
+        Write-Host "WIM image mounted successfully at $MountDir" -ForegroundColor $Script:SuccessColor
+        SetStatusText -message "Step 3 completed: WIM image mounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
         # Step 4: Add drivers to the mounted WIM image
+        Write-Host "Step 4: Adding drivers to the mounted WIM image..." -ForegroundColor $Script:NeutralColor
+        SetStatusText -message "Step 4: Adding drivers to the WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
         if (-not (AddDriversToDriverStore -DriverPath $ExportDir -MountDir $MountDir)) {
+            Write-Host "Error: Failed to add drivers to WIM image." -ForegroundColor $Script:ErrorColor
+            SetStatusText -message "Error: Failed to add drivers to WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
+        Write-Host "Drivers added successfully to the WIM image." -ForegroundColor $Script:SuccessColor
+        SetStatusText -message "Step 4 completed: Drivers added successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
         # Step 5: Commit changes and unmount the WIM image
-        CommitAndUnmountWim -MountDir $MountDir
+        Write-Host "Step 5: Committing changes and unmounting the WIM image..." -ForegroundColor $Script:NeutralColor
+        SetStatusText -message "Step 5: Committing changes and unmounting the WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
+        if (-not (CommitAndUnmountWim -MountDir $MountDir)) {
+            Write-Host "Error: Failed to unmount the WIM image. Manual cleanup may be required." -ForegroundColor $Script:ErrorColor
+            SetStatusText -message "Error: Failed to unmount the WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return
+        }
+        Write-Host "WIM image unmounted and changes committed successfully." -ForegroundColor $Script:SuccessColor
+        SetStatusText -message "Step 5 completed: WIM image unmounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+    
+        Write-Host "AddDriversToImage process completed successfully!" -ForegroundColor $Script:SuccessColor
     }
     
     
