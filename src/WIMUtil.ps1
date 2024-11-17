@@ -35,54 +35,22 @@ $script:currentScreenIndex = 1
 # Fix Internet Explorer Engine is Missing to Ensure GUI Launches
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2 -Force
 
-# Define the URLs for dev and main branches
-$devUrl = "https://github.com/memstechtips/WIMUtil/raw/dev/src/WIMUtil.ps1"
-$mainUrl = "https://github.com/memstechtips/WIMUtil/raw/main/src/WIMUtil.ps1"
+param (
+    [string]$Branch = "main" # Default branch is main unless overridden
+)
 
-# Default to main branch
-$currentBranch = "main"
+# Write debug information about the branch
+Write-Host "DEBUG: Detected branch parameter: $Branch" -ForegroundColor Magenta
 
-# Function to check invocation URL against predefined URLs
-function DetectBranch {
-    param (
-        [string]$InvocationName
-    )
-
-    if ($InvocationName -eq $devUrl) {
-        return "dev"
-    } elseif ($InvocationName -eq $mainUrl) {
-        return "main"
-    } else {
-        return $null
-    }
-}
-
-# Attempt to detect the branch from MyInvocation
-if ($MyInvocation -and $MyInvocation.InvocationName) {
-    $currentBranch = DetectBranch -InvocationName $MyInvocation.InvocationName
-}
-
-# Fallback to HostInvocation if MyInvocation didn't detect the branch
-if (-not $currentBranch -or $currentBranch -eq $null) {
-    if ($hostinvocation -and $hostinvocation.InvocationName) {
-        $currentBranch = DetectBranch -InvocationName $hostinvocation.InvocationName
-    }
-}
-
-# If still not detected, use the default branch
-if (-not $currentBranch -or $currentBranch -eq $null) {
-    Write-Host "DEBUG: Unable to detect branch from InvocationName. Using fallback to 'main'." -ForegroundColor Yellow
-    $currentBranch = "main"
-}
-
+# Set the branch based on the -branch parameter
+$currentBranch = $Branch
 Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
-Pause
 
-# Construct the configuration URL based on the detected branch
-$configUrl = "https://github.com/memstechtips/WIMUtil/raw/$currentBranch/config/wimutil-settings.json"
+# Construct the configuration URL based on the branch
+$configUrl = "https://raw.githubusercontent.com/memstechtips/WIMUtil/$currentBranch/config/wimutil-settings.json"
 Write-Host "Constructed Configuration URL: $configUrl" -ForegroundColor Yellow
 
-# Load the configuration
+# Load the configuration from the URL
 try {
     $config = (Invoke-WebRequest -Uri $configUrl -ErrorAction Stop).Content | ConvertFrom-Json
     Write-Host "Configuration loaded successfully from $configUrl" -ForegroundColor Green
