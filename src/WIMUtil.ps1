@@ -467,7 +467,7 @@ if ($readerOperationSuccessful) {
         SetStatusText -message "Downloading the latest UnattendedWinstall XML file..." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
         [System.Windows.Forms.Application]::DoEvents()
         $url = "https://github.com/memstechtips/UnattendedWinstall/raw/main/autounattend.xml"
-        $destination = "C:\WIMUtil\autounattend.xml"
+        $destination = $Script:WorkingDirectory
 
         try {
         (New-Object System.Net.WebClient).DownloadFile($url, $destination)
@@ -493,7 +493,7 @@ if ($readerOperationSuccessful) {
         
         if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             $selectedFile = $OpenFileDialog.FileName
-            $destination = "C:\WIMUtil\autounattend.xml"
+            $destination = $Script:WorkingDirectory
     
             # Check for existing autounattend.xml file and delete it if found
             if (Test-Path -Path $destination) {
@@ -630,25 +630,57 @@ if ($readerOperationSuccessful) {
             [string]$MountParentDir    # User-selected parent directory for mounting WIM
         )
     
-        # Validate working directory and mount directory
+        # Validate input parameters
+        if (-not $WorkingDirectory) {
+            SetStatusText -message "Error: Working directory is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Working directory is not set."
+            return
+        }
+    
+        if (-not $ImageFile) {
+            SetStatusText -message "Error: Image file is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Image file is not set."
+            return
+        }
+    
+        if (-not $MountParentDir) {
+            SetStatusText -message "Error: Mount parent directory is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Mount parent directory is not set."
+            return
+        }
+    
+        # Define paths
         $DriversDir = Join-Path -Path (Split-Path -Parent $WorkingDirectory) -ChildPath "Drivers"
         $MountDir = Join-Path -Path $MountParentDir -ChildPath "WIMMount"
         $WimDestination = Join-Path -Path (Join-Path -Path $WorkingDirectory -ChildPath "sources") -ChildPath "install.wim"
     
+        # Validate mount directory and working directory
         if ($MountDir -eq $WorkingDirectory) {
             SetStatusText -message "Error: Mount directory cannot be the same as the working directory." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Error: Mount directory cannot be the same as the working directory."
             return
         }
     
-        # Check for sufficient free space (10GB)
-        $drive = Get-PSDrive -Name (Split-Path -Qualifier $MountParentDir)
+        # Check free space (10GB minimum)
+        $driveLetter = (Split-Path -Qualifier $MountParentDir).TrimEnd(":")
+        try {
+            $drive = Get-PSDrive -Name $driveLetter
+            if (-not $drive) {
+                throw "Drive not found for the mount parent directory."
+            }
+        } catch {
+            SetStatusText -message "Error: Could not determine free space for the selected mount parent directory." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Could not determine free space for the selected mount parent directory."
+            return
+        }
+    
         if ($drive.Free -lt 10GB) {
             SetStatusText -message "Error: Not enough free space for mounting WIM." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Error: Not enough free space for mounting WIM."
             return
         }
     
+        # Start the driver injection process
         Write-Host "Starting AddDriversToImage process..." -ForegroundColor $Script:NeutralColor
         SetStatusText -message "Starting driver injection process..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
@@ -672,8 +704,7 @@ if ($readerOperationSuccessful) {
             Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$DriversDir" -NoNewWindow -Wait
             Write-Host "Drivers exported successfully to $DriversDir."
             SetStatusText -message "Drivers exported successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        }
-        catch {
+        } catch {
             SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Error exporting drivers: $_"
             return
@@ -711,8 +742,7 @@ if ($readerOperationSuccessful) {
             Copy-Item -Path $ImageFile -Destination $WimDestination -Force
             Write-Host "Updated WIM copied to $WimDestination successfully."
             SetStatusText -message "Updated WIM copied to working directory successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        }
-        catch {
+        } catch {
             Write-Host "Error copying updated WIM: $_"
             SetStatusText -message "Error copying updated WIM: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
@@ -726,8 +756,7 @@ if ($readerOperationSuccessful) {
             Remove-Item -Path $MountDir -Recurse -Force
             Write-Host "WIMMount directory cleaned up successfully."
             SetStatusText -message "WIMMount directory cleaned up successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        }
-        catch {
+        } catch {
             Write-Host "Error cleaning up WIMMount directory: $_"
             SetStatusText -message "Error cleaning up WIMMount directory: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
         }
@@ -735,6 +764,7 @@ if ($readerOperationSuccessful) {
         Write-Host "Driver injection process completed successfully!" -ForegroundColor $Script:SuccessColor
         SetStatusText -message "Driver injection completed successfully!" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     }
+    
     
     
     function AddRecommendedDrivers {
