@@ -263,7 +263,8 @@ if ($readerOperationSuccessful) {
     function UpdateStartISOExtractionButtonState {
         if ($Script:SelectedISO -and $Script:WorkingDirectory) {
             $StartISOExtractionButton.IsEnabled = $true
-        } else {
+        }
+        else {
             $StartISOExtractionButton.IsEnabled = $false
         }
     }
@@ -315,7 +316,8 @@ if ($readerOperationSuccessful) {
                 if (-not $drive) {
                     throw "Drive not found for the selected directory."
                 }
-            } catch {
+            }
+            catch {
                 $Script:WorkingDirectory = $null
                 $WorkingDirectoryTextBox.Text = "Error determining drive space. Please try again."
                 [System.Windows.MessageBox]::Show(
@@ -337,7 +339,8 @@ if ($readerOperationSuccessful) {
     
                 # Update the TextBox with the actual working directory path
                 $WorkingDirectoryTextBox.Text = "Working directory created: $Script:WorkingDirectory"
-            } else {
+            }
+            else {
                 $Script:WorkingDirectory = $null
                 $WorkingDirectoryTextBox.Text = "Insufficient space. Please select a directory with at least 10GB of free space."
                 [System.Windows.MessageBox]::Show(
@@ -380,7 +383,8 @@ if ($readerOperationSuccessful) {
             if (-not $drive) {
                 throw "Drive not found for the selected directory."
             }
-        } catch {
+        }
+        catch {
             SetStatusText -message "Error determining free space for the selected directory. Please try again." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
             return
         }
@@ -444,7 +448,8 @@ if ($readerOperationSuccessful) {
                 [System.Windows.Forms.Application]::DoEvents()
                 Dismount-DiskImage -ImagePath $Script:SelectedISO -ErrorAction SilentlyContinue
             }
-        } else {
+        }
+        else {
             SetStatusText -message "Not enough space on the selected drive for extraction." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
             [System.Windows.Forms.Application]::DoEvents()
         }
@@ -462,25 +467,27 @@ if ($readerOperationSuccessful) {
     
     
 
-    # DownloadUWXML function
+    # Download UnattendedWinstall XML File function
     function DownloadUWXML {
         SetStatusText -message "Downloading the latest UnattendedWinstall XML file..." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
         [System.Windows.Forms.Application]::DoEvents()
+    
         $url = "https://github.com/memstechtips/UnattendedWinstall/raw/main/autounattend.xml"
-        $destination = $Script:WorkingDirectory
-
+        $destination = Join-Path -Path $Script:WorkingDirectory -ChildPath "autounattend.xml"
+    
         try {
-        (New-Object System.Net.WebClient).DownloadFile($url, $destination)
+            (New-Object System.Net.WebClient).DownloadFile($url, $destination)
             SetStatusText -message "Latest UnattendedWinstall XML file added successfully." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
-        
+    
             # Update the DownloadUWTextBox content with the success message
-            SetStatusText -message "Latest UnattendedWinstall Answer file added to Windows Installation Media" -color $Script:NeutralColor -textBlock ([ref]$DownloadUWTextBox)
+            $DownloadUWTextBox.Text = "Answer file added to: $destination"
         }
         catch {
             SetStatusText -message "Failed to download the file: $_" -color $Script:ErrorColor -textBlock ([ref]$AddXMLStatusText)
         }
         [System.Windows.Forms.Application]::DoEvents()
     }
+    
 
 
     # SelectXMLFile function
@@ -488,14 +495,13 @@ if ($readerOperationSuccessful) {
         SetStatusText -message "Please select an XML file..." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
         [System.Windows.Forms.Application]::DoEvents()
     
-        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-        $OpenFileDialog.Filter = "XML Files (*.xml)|*.xml"
-        
-        if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            $selectedFile = $OpenFileDialog.FileName
-            $destination = $Script:WorkingDirectory
+        # Use the SelectLocation function for file selection
+        $selectedFile = SelectLocation -Mode "File" -Title "Select an XML file" -Filter "XML Files (*.xml)|*.xml"
     
-            # Check for existing autounattend.xml file and delete it if found
+        if ($selectedFile) {
+            $destination = Join-Path -Path $Script:WorkingDirectory -ChildPath "autounattend.xml"
+    
+            # Check if an existing autounattend.xml file is present and delete it
             if (Test-Path -Path $destination) {
                 try {
                     Remove-Item -Path $destination -Force
@@ -511,9 +517,9 @@ if ($readerOperationSuccessful) {
                 # Copy the selected file to the destination
                 Copy-Item -Path $selectedFile -Destination $destination -Force
                 SetStatusText -message "Selected XML file added successfully." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
-                
+    
                 # Update the ManualXMLPathTextBox with the success message
-                SetStatusText -message "Selected Answer file added to Windows Installation Media" -color $Script:NeutralColor -textBlock ([ref]$ManualXMLPathTextBox)
+                $ManualXMLPathTextBox.Text = "Answer file added to: $destination"
             }
             catch {
                 SetStatusText -message "Failed to add the selected file: $_" -color $Script:ErrorColor -textBlock ([ref]$AddXMLStatusText)
@@ -521,6 +527,7 @@ if ($readerOperationSuccessful) {
         }
         [System.Windows.Forms.Application]::DoEvents()
     }
+    
     
 
     function ConvertEsdToWim {
@@ -625,11 +632,11 @@ if ($readerOperationSuccessful) {
     
     function AddDriversToImage {
         param (
-            [string]$WorkingDirectory, # User-selected working directory
-            [string]$ImageFile, # Path to the .esd or .wim file
-            [string]$MountParentDir    # User-selected parent directory for mounting WIM
+            [string]$WorkingDirectory = $Script:WorkingDirectory, # Default to global variable if not provided
+            [string]$ImageFile = (Join-Path -Path $Script:WorkingDirectory -ChildPath "sources\install.esd"), # Default ImageFile
+            [string]$MountParentDir = (Split-Path -Parent $Script:WorkingDirectory) # Default to parent of working directory
         )
-    
+        
         # Validate input parameters
         if (-not $WorkingDirectory) {
             SetStatusText -message "Error: Working directory is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
@@ -668,7 +675,8 @@ if ($readerOperationSuccessful) {
             if (-not $drive) {
                 throw "Drive not found for the mount parent directory."
             }
-        } catch {
+        }
+        catch {
             SetStatusText -message "Error: Could not determine free space for the selected mount parent directory." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Error: Could not determine free space for the selected mount parent directory."
             return
@@ -704,7 +712,8 @@ if ($readerOperationSuccessful) {
             Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$DriversDir" -NoNewWindow -Wait
             Write-Host "Drivers exported successfully to $DriversDir."
             SetStatusText -message "Drivers exported successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        } catch {
+        }
+        catch {
             SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Error exporting drivers: $_"
             return
@@ -742,7 +751,8 @@ if ($readerOperationSuccessful) {
             Copy-Item -Path $ImageFile -Destination $WimDestination -Force
             Write-Host "Updated WIM copied to $WimDestination successfully."
             SetStatusText -message "Updated WIM copied to working directory successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        } catch {
+        }
+        catch {
             Write-Host "Error copying updated WIM: $_"
             SetStatusText -message "Error copying updated WIM: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
@@ -756,7 +766,8 @@ if ($readerOperationSuccessful) {
             Remove-Item -Path $MountDir -Recurse -Force
             Write-Host "WIMMount directory cleaned up successfully."
             SetStatusText -message "WIMMount directory cleaned up successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        } catch {
+        }
+        catch {
             Write-Host "Error cleaning up WIMMount directory: $_"
             SetStatusText -message "Error cleaning up WIMMount directory: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
         }
@@ -989,16 +1000,16 @@ if ($readerOperationSuccessful) {
 
     # Event handler for the Next button
     $NextButton.Add_Click({
-        if ($script:currentScreenIndex -eq 4) {
-            # On the last screen, execute the CleanupAndExit function for "Exit"
-            CleanupAndExit
-        }
-        else {
-            # Increment to the next screen and show it
-            $script:currentScreenIndex++
-            ShowScreen
-        }
-    })
+            if ($script:currentScreenIndex -eq 4) {
+                # On the last screen, execute the CleanupAndExit function for "Exit"
+                CleanupAndExit
+            }
+            else {
+                # Increment to the next screen and show it
+                $script:currentScreenIndex++
+                ShowScreen
+            }
+        })
     
     
     # Event handler for the Back button
