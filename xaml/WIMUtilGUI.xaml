@@ -258,6 +258,7 @@
                                 VerticalAlignment="Center"
                                 Content="Start"
                                 FontWeight="Bold"
+                                IsEnabled="False"
                                 Style="{StaticResource PrimaryButtonStyle}" />
                             <!--  Download Notice  -->
                             <TextBlock

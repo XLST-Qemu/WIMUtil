@@ -249,67 +249,78 @@ if ($readerOperationSuccessful) {
     
 
     # Helper Functions
+    function UpdateStartISOExtractionButtonState {
+        if ($Script:SelectedISO -and $Script:WorkingDirectory) {
+            $StartButton.IsEnabled = $true
+        } else {
+            $StartButton.IsEnabled = $false
+        }
+    }
+    
+
     function SelectLocation {
         param (
             [string]$Mode = "Folder", # Accepts "Folder" or "File"
             [string]$Title = "Select a location",
             [string]$Filter = "All Files (*.*)|*.*" # Applicable only for File mode
         )
-
+    
         Add-Type -AssemblyName System.Windows.Forms
-
+    
         if ($Mode -eq "Folder") {
-            # Folder selection dialog
             $FolderBrowserDialog = New-Object System.Windows.Forms.FolderBrowserDialog
             $FolderBrowserDialog.Description = $Title
             $FolderBrowserDialog.ShowNewFolderButton = $true
-
+    
             if ($FolderBrowserDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                 return $FolderBrowserDialog.SelectedPath
             }
         }
         elseif ($Mode -eq "File") {
-            # File save dialog
-            $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-            $SaveFileDialog.Title = $Title
-            $SaveFileDialog.Filter = $Filter
-
-            if ($SaveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                return $SaveFileDialog.FileName
+            $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+            $OpenFileDialog.Title = $Title
+            $OpenFileDialog.Filter = $Filter
+    
+            if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                return $OpenFileDialog.FileName
             }
         }
-
+    
         return $null # User canceled
     }
+    
 
     function SelectWorkingDirectory {
-        # Prompt the user to select a working directory
         $baseDirectory = SelectLocation -Mode "Folder" -Title "Select a directory for working files"
-
+    
         if ($baseDirectory) {
-            # Append "WIMUtil" to the selected base directory
             $Script:WorkingDirectory = Join-Path -Path $baseDirectory -ChildPath "WIMUtil"
-
-            # Get the drive or partition of the base directory
-            $drive = Get-PSDrive -Name (Split-Path -Qualifier $baseDirectory)
-
-            # Check if there's at least 10GB of free space available
+            try {
+                $drive = Get-PSDrive -Name (Split-Path -Qualifier $baseDirectory)
+                if (-not $drive) {
+                    throw "Drive not found for the selected directory."
+                }
+            } catch {
+                $Script:WorkingDirectory = $null
+                $WorkingDirectoryTextBox.Text = "Error determining drive space. Please try again."
+                [System.Windows.MessageBox]::Show(
+                    "Could not determine free space for the selected directory. Please try again.", 
+                    "Error", 
+                    [System.Windows.MessageBoxButton]::OK, 
+                    [System.Windows.MessageBoxImage]::Error
+                )
+                return
+            }
+    
             $requiredSpace = 10GB
             if ($drive.Free -ge $requiredSpace) {
-                # Create the WIMUtil directory if it doesn't already exist
                 if (-not (Test-Path -Path $Script:WorkingDirectory)) {
                     New-Item -ItemType Directory -Path $Script:WorkingDirectory -Force | Out-Null
                 }
-
-                # Update the TextBox with the actual working directory path
                 $WorkingDirectoryTextBox.Text = "Working directory created: $Script:WorkingDirectory"
-            }
-            else {
-                # Reset the working directory and show an error message
+            } else {
                 $Script:WorkingDirectory = $null
-                $WorkingDirectoryTextBox.Text = "Insufficient space. Please select a directory with at least 6GB of free space."
-            
-                # Display a popup message
+                $WorkingDirectoryTextBox.Text = "Insufficient space. Please select a directory with at least 10GB of free space."
                 [System.Windows.MessageBox]::Show(
                     "The selected drive/partition does not have enough space. Please select a different directory.", 
                     "Insufficient Space", 
@@ -318,7 +329,9 @@ if ($readerOperationSuccessful) {
                 )
             }
         }
+        UpdateStartISOExtractionButtonState
     }
+    
 
 
     # Select ISO function
@@ -326,10 +339,9 @@ if ($readerOperationSuccessful) {
         $Script:SelectedISO = SelectLocation -Mode "File" -Title "Select an ISO file" -Filter "ISO Files (*.iso)|*.iso"
         if ($Script:SelectedISO) {
             Write-Host "Selected ISO: $Script:SelectedISO"
-            
-            # Update the ISOPathTextBox with the selected ISO file path
             $ISOPathTextBox.Text = "Windows ISO file selected at $Script:SelectedISO"
         }
+        UpdateStartISOExtractionButtonState
     }
     
     
@@ -906,7 +918,7 @@ if ($readerOperationSuccessful) {
     $window.Add_MouseLeftButtonDown({ Window_MouseLeftButtonDown $args[0] $args[1] })
     $SelectWorkingDirectoryButton.Add_Click({ SelectWorkingDirectory })
     $SelectISOButton.Add_Click({ SelectISO })
-    $StartISOExtractionButton.Add_Click({ StartISOExtraction })
+    $StartISOExtractionButton.Add_Click({ ExtractISO })
     $DownloadWin10Button.Add_Click({ DownloadWindows10ISO })
     $DownloadWin11Button.Add_Click({ DownloadWindows11ISO })
     $CloseButton.Add_Click({ CleanupAndExit })
