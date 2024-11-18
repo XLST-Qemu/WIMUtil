@@ -140,6 +140,7 @@ if ($readerOperationSuccessful) {
     $ProgressStep4 = $window.FindName("ProgressStep4")
     $SelectISOScreen = $window.FindName("SelectISOScreen")
     $ISOPathTextBox = $window.FindName("ISOPathTextBox")
+    $WorkingDirectoryTextBox = $window.FindName("WorkingDirectoryTextBox")
     $DownloadWin10Button = $window.FindName("DownloadWin10Button")
     $DownloadWin11Button = $window.FindName("DownloadWin11Button")
     $AddXMLFileScreen = $window.FindName("AddXMLFileScreen")
@@ -251,9 +252,9 @@ if ($readerOperationSuccessful) {
     # Helper Functions
     function UpdateStartISOExtractionButtonState {
         if ($Script:SelectedISO -and $Script:WorkingDirectory) {
-            $StartButton.IsEnabled = $true
+            $StartISOExtractionButton.IsEnabled = $true
         } else {
-            $StartButton.IsEnabled = $false
+            $StartISOExtractionButton.IsEnabled = $false
         }
     }
     
@@ -291,12 +292,16 @@ if ($readerOperationSuccessful) {
     
 
     function SelectWorkingDirectory {
+        # Prompt the user to select a working directory
         $baseDirectory = SelectLocation -Mode "Folder" -Title "Select a directory for working files"
     
         if ($baseDirectory) {
             $Script:WorkingDirectory = Join-Path -Path $baseDirectory -ChildPath "WIMUtil"
+    
+            # Extract the drive letter and ensure it's valid
+            $driveLetter = (Split-Path -Qualifier $baseDirectory).TrimEnd(":")
             try {
-                $drive = Get-PSDrive -Name (Split-Path -Qualifier $baseDirectory)
+                $drive = Get-PSDrive -Name $driveLetter
                 if (-not $drive) {
                     throw "Drive not found for the selected directory."
                 }
@@ -312,11 +317,15 @@ if ($readerOperationSuccessful) {
                 return
             }
     
+            # Free space validation
             $requiredSpace = 10GB
             if ($drive.Free -ge $requiredSpace) {
+                # Create the WIMUtil directory if it doesn't already exist
                 if (-not (Test-Path -Path $Script:WorkingDirectory)) {
                     New-Item -ItemType Directory -Path $Script:WorkingDirectory -Force | Out-Null
                 }
+    
+                # Update the TextBox with the actual working directory path
                 $WorkingDirectoryTextBox.Text = "Working directory created: $Script:WorkingDirectory"
             } else {
                 $Script:WorkingDirectory = $null
@@ -331,6 +340,7 @@ if ($readerOperationSuccessful) {
         }
         UpdateStartISOExtractionButtonState
     }
+    
     
 
 
