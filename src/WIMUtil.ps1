@@ -3,7 +3,8 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     Try {
         Start-Process PowerShell.exe -ArgumentList ("-NoProfile -ExecutionPolicy Bypass -File `"{0}`"" -f $PSCommandPath) -Verb RunAs
         Exit
-    } Catch {
+    }
+    Catch {
         Write-Host "Failed to run as Administrator. Please rerun with elevated privileges." -ForegroundColor Red
         Exit
     }
@@ -46,7 +47,8 @@ $currentBranch = "unknown"  # Fallback value
 if ($configUrl -match "https://raw.githubusercontent.com/memstechtips/WIMUtil/([^/]+)/config/wimutil-settings.json") {
     $currentBranch = $matches[1]
     Write-Host "Branch detected from Configuration URL: $currentBranch" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "Unable to detect branch from Configuration URL. Using fallback." -ForegroundColor Yellow
 }
 
@@ -56,7 +58,8 @@ Write-Host "Using branch: $currentBranch" -ForegroundColor Cyan
 try {
     $config = (Invoke-WebRequest -Uri $configUrl -ErrorAction Stop).Content | ConvertFrom-Json
     Write-Host "Configuration loaded successfully from $configUrl" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "Failed to load configuration from URL: $configUrl" -ForegroundColor Red
     exit 1
 }
@@ -101,7 +104,8 @@ try {
     # Clean up stream
     $xamlStream.Close()
     Write-Host "XAML GUI loaded successfully." -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "Error loading XAML from URL: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
@@ -148,6 +152,8 @@ if ($readerOperationSuccessful) {
     $NextButton.IsEnabled = $false
     $BackButton = $window.FindName("BackButton")
     $SelectISOButton = $window.FindName("SelectISOButton")
+    $SelectWorkingDirectoryButton = $window.FindName("SelectWorkingDirectoryButton")
+    $StartISOExtractionButton = $window.FindName("StartISOExtractionButton")
     $ExtractISOStatusText = $window.FindName("ExtractISOStatusText")
     $AddXMLStatusText = $window.FindName("AddXMLStatusText")
     $DownloadUWXMLButton = $window.FindName("DownloadUWXMLButton")
@@ -210,25 +216,24 @@ if ($readerOperationSuccessful) {
         [System.Windows.Forms.Application]::DoEvents() 
     }
     
-   
     ShowScreen    
 
     # Close button function
-    function Close_Click {
-        $workingDir = "C:\WIMUtil"
-        
-        # Check if the working directory exists
-        if (Test-Path -Path $workingDir) {
+    function CleanupAndExit {
+        # Check if the working directory is set and exists
+        if ($Script:WorkingDirectory -and (Test-Path -Path $Script:WorkingDirectory)) {
             # Show a confirmation popup to ask for cleanup
-            $result = [System.Windows.MessageBox]::Show("Do you want to clean up the working directory to free up space?", 
+            $result = [System.Windows.MessageBox]::Show(
+                "Do you want to clean up the working directory to free up space? (Drivers folder will not be deleted; please remove manually if needed.)", 
                 "Cleanup Confirmation", 
                 [System.Windows.MessageBoxButton]::YesNo, 
-                [System.Windows.MessageBoxImage]::Question)
-    
+                [System.Windows.MessageBoxImage]::Question
+            )
+        
             # If the user chooses "Yes," attempt to delete the working directory
             if ($result -eq [System.Windows.MessageBoxResult]::Yes) {
                 try {
-                    Remove-Item -Path $workingDir -Recurse -Force
+                    Remove-Item -Path $Script:WorkingDirectory -Recurse -Force
                     Write-Host "Working directory cleaned up successfully."
                 }
                 catch {
@@ -236,62 +241,141 @@ if ($readerOperationSuccessful) {
                 }
             }
         }
-    
+        
         # Close the application
         $window.Close()
     }
     
+    
+
+    # Helper Functions
+    function SelectLocation {
+        param (
+            [string]$Mode = "Folder", # Accepts "Folder" or "File"
+            [string]$Title = "Select a location",
+            [string]$Filter = "All Files (*.*)|*.*" # Applicable only for File mode
+        )
+
+        Add-Type -AssemblyName System.Windows.Forms
+
+        if ($Mode -eq "Folder") {
+            # Folder selection dialog
+            $FolderBrowserDialog = New-Object System.Windows.Forms.FolderBrowserDialog
+            $FolderBrowserDialog.Description = $Title
+            $FolderBrowserDialog.ShowNewFolderButton = $true
+
+            if ($FolderBrowserDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                return $FolderBrowserDialog.SelectedPath
+            }
+        }
+        elseif ($Mode -eq "File") {
+            # File save dialog
+            $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+            $SaveFileDialog.Title = $Title
+            $SaveFileDialog.Filter = $Filter
+
+            if ($SaveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                return $SaveFileDialog.FileName
+            }
+        }
+
+        return $null # User canceled
+    }
+
+    function SelectWorkingDirectory {
+        # Prompt the user to select a working directory
+        $baseDirectory = SelectLocation -Mode "Folder" -Title "Select a directory for working files"
+
+        if ($baseDirectory) {
+            # Append "WIMUtil" to the selected base directory
+            $Script:WorkingDirectory = Join-Path -Path $baseDirectory -ChildPath "WIMUtil"
+
+            # Get the drive or partition of the base directory
+            $drive = Get-PSDrive -Name (Split-Path -Qualifier $baseDirectory)
+
+            # Check if there's at least 10GB of free space available
+            $requiredSpace = 10GB
+            if ($drive.Free -ge $requiredSpace) {
+                # Create the WIMUtil directory if it doesn't already exist
+                if (-not (Test-Path -Path $Script:WorkingDirectory)) {
+                    New-Item -ItemType Directory -Path $Script:WorkingDirectory -Force | Out-Null
+                }
+
+                # Update the TextBox with the actual working directory path
+                $WorkingDirectoryTextBox.Text = "Working directory created: $Script:WorkingDirectory"
+            }
+            else {
+                # Reset the working directory and show an error message
+                $Script:WorkingDirectory = $null
+                $WorkingDirectoryTextBox.Text = "Insufficient space. Please select a directory with at least 6GB of free space."
+            
+                # Display a popup message
+                [System.Windows.MessageBox]::Show(
+                    "The selected drive/partition does not have enough space. Please select a different directory.", 
+                    "Insufficient Space", 
+                    [System.Windows.MessageBoxButton]::OK, 
+                    [System.Windows.MessageBoxImage]::Error
+                )
+            }
+        }
+    }
+
 
     # Select ISO function
-    function SelectISO_Click {
-        $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-        $OpenFileDialog.Filter = "ISO Files (*.iso)|*.iso"
-        if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            $Script:SelectedISO = $OpenFileDialog.FileName
+    function SelectISO {
+        $Script:SelectedISO = SelectLocation -Mode "File" -Title "Select an ISO file" -Filter "ISO Files (*.iso)|*.iso"
+        if ($Script:SelectedISO) {
             Write-Host "Selected ISO: $Script:SelectedISO"
             
             # Update the ISOPathTextBox with the selected ISO file path
             $ISOPathTextBox.Text = "Windows ISO file selected at $Script:SelectedISO"
-    
-            # Extract selected ISO file contents
-            ExtractISO
         }
     }
     
-
+    
     # Function to extract ISO
     function ExtractISO {
-        $drive = Get-PSDrive -Name C
-        $requiredSpace = 15GB
-        if ($drive.Free -gt $requiredSpace) {
+        # Ensure the working directory is set and exists
+        if (-not $Script:WorkingDirectory -or -not (Test-Path -Path $Script:WorkingDirectory)) {
+            SetStatusText -message "Please select a working directory first." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
+            return
+        }
+    
+        # Calculate the required free space
+        $requiredSpace = 10GB
+        $drive = Get-PSDrive -Name (Split-Path -Qualifier $Script:WorkingDirectory)
+    
+        # Check if the drive has enough free space
+        if ($drive.Free -ge $requiredSpace) {
             SetStatusText -message "Sufficient space available. Preparing working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
             [System.Windows.Forms.Application]::DoEvents()
     
-            $workingDir = "C:\WIMUtil"
-            if (Test-Path -Path $workingDir) {
+            # Clear the working directory if it already exists
+            if (Test-Path -Path $Script:WorkingDirectory) {
                 SetStatusText -message "Deleting existing working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
-                Remove-Item -Path $workingDir -Recurse -Force
+                Remove-Item -Path $Script:WorkingDirectory -Recurse -Force
             }
     
+            # Create a fresh working directory
             SetStatusText -message "Creating new working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
             [System.Windows.Forms.Application]::DoEvents()
-            New-Item -ItemType Directory -Path $workingDir -Force
+            New-Item -ItemType Directory -Path $Script:WorkingDirectory -Force | Out-Null
     
             try {
+                # Mount the ISO
                 SetStatusText -message "Mounting $Script:SelectedISO..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
                 $mountResult = Mount-DiskImage -ImagePath $Script:SelectedISO -PassThru
                 $driveLetter = ($mountResult | Get-Volume).DriveLetter + ":"
     
-                SetStatusText -message "Copying files from mounted ISO ($driveLetter) to $workingDir..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
+                # Copy files from the mounted ISO to the working directory
+                SetStatusText -message "Copying files from mounted ISO ($driveLetter) to $Script:WorkingDirectory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
-                
-                # Copy all files from the mounted ISO to the working directory
-                Copy-Item -Path "$driveLetter\*" -Destination $workingDir -Recurse -Force
+                Copy-Item -Path "$driveLetter\*" -Destination $Script:WorkingDirectory -Recurse -Force
     
-                # Explicitly check and remove autounattend.xml if it exists in the working directory
-                $autounattendPath = Join-Path -Path $workingDir -ChildPath "autounattend.xml"
+                # Remove autounattend.xml if it exists
+                $autounattendPath = Join-Path -Path $Script:WorkingDirectory -ChildPath "autounattend.xml"
                 if (Test-Path -Path $autounattendPath) {
                     try {
                         Remove-Item -Path $autounattendPath -Force -ErrorAction Stop
@@ -302,10 +386,12 @@ if ($readerOperationSuccessful) {
                     }
                 }
     
+                # Dismount the ISO
                 SetStatusText -message "Dismounting ISO..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
                 Dismount-DiskImage -ImagePath $Script:SelectedISO
     
+                # Mark extraction as completed
                 SetStatusText -message "Extraction completed. Click Next to Continue." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
     
@@ -313,20 +399,19 @@ if ($readerOperationSuccessful) {
                 $NextButton.IsEnabled = $true
             }
             catch {
+                # Handle any errors during extraction
                 SetStatusText -message "Extraction failed: $_" -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
                 Dismount-DiskImage -ImagePath $Script:SelectedISO -ErrorAction SilentlyContinue
             }
         }
         else {
-            SetStatusText -message "Not enough space on drive C: for extraction." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
+            # Insufficient space error
+            SetStatusText -message "Not enough space on the selected drive for extraction." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
             [System.Windows.Forms.Application]::DoEvents()
         }
     }
     
-    
-    
-
     # Download ISO functions
     function DownloadWindows10ISO {
         Start-Process "https://www.microsoft.com/software-download/windows10"
@@ -410,13 +495,22 @@ if ($readerOperationSuccessful) {
             [System.Windows.Forms.Application]::DoEvents()
     
             try {
+                # Convert ESD to WIM
                 Start-Process -FilePath "dism" -ArgumentList "/export-image /sourceimagefile:$ImageFile /sourceindex:1 /destinationimagefile:$convertedWimFile /compress:max /checkintegrity" -NoNewWindow -Wait
                 SetStatusText -message "Conversion to .wim completed successfully: $convertedWimFile" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
+    
+                # Delete the original ESD file
+                Write-Host "Deleting original .esd file: $ImageFile..."
+                Remove-Item -Path $ImageFile -Force
+                Write-Host "Original .esd file deleted successfully."
+                SetStatusText -message "Original .esd file deleted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+    
                 return $convertedWimFile
             }
             catch {
                 SetStatusText -message "Error converting .esd to .wim: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+                Write-Host "Error: $_"
                 return $null
             }
         }
@@ -426,9 +520,10 @@ if ($readerOperationSuccessful) {
         }
     }
     
+    
     function MountWimImage {
         param (
-            [string]$WimFile,   # Path to the WIM file
+            [string]$WimFile, # Path to the WIM file
             [string]$MountDir   # Path to the mount directory
         )
     
@@ -438,20 +533,23 @@ if ($readerOperationSuccessful) {
     
         try {
             SetStatusText -message "Mounting WIM image: $WimFile to $MountDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Mounting WIM image: $WimFile to $MountDir..."
             Start-Process -FilePath "dism" -ArgumentList "/mount-wim /wimfile:$WimFile /index:1 /mountdir:$MountDir" -NoNewWindow -Wait
             SetStatusText -message "WIM image mounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            Write-Host "WIM image mounted successfully."
             return $true
         }
         catch {
             SetStatusText -message "Error mounting WIM image: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error mounting WIM image: $_"
             return $false
         }
     }
+    
 
     function AddDriversToDriverStore {
         param (
-            [string]$DriverPath,  # Path to the exported drivers
+            [string]$DriverPath, # Path to the exported drivers
             [string]$MountDir     # Path to the mounted WIM directory
         )
     
@@ -488,83 +586,115 @@ if ($readerOperationSuccessful) {
     
     function AddDriversToImage {
         param (
-            [string]$ExportDir = "C:\WIMUtil\ExportedDrivers",
-            [string]$ImageFile = "C:\WIMUtil\sources\install.esd",
-            [string]$MountDir = "C:\WIMUtil\Mount"
+            [string]$WorkingDirectory, # User-selected working directory
+            [string]$ImageFile, # Path to the .esd or .wim file
+            [string]$MountParentDir    # User-selected parent directory for mounting WIM
         )
     
+        # Validate working directory and mount directory
+        $DriversDir = Join-Path -Path (Split-Path -Parent $WorkingDirectory) -ChildPath "Drivers"
+        $MountDir = Join-Path -Path $MountParentDir -ChildPath "WIMMount"
+        $WimDestination = Join-Path -Path (Join-Path -Path $WorkingDirectory -ChildPath "sources") -ChildPath "install.wim"
+    
+        if ($MountDir -eq $WorkingDirectory) {
+            SetStatusText -message "Error: Mount directory cannot be the same as the working directory." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Mount directory cannot be the same as the working directory."
+            return
+        }
+    
+        # Check for sufficient free space (10GB)
+        $drive = Get-PSDrive -Name (Split-Path -Qualifier $MountParentDir)
+        if ($drive.Free -lt 10GB) {
+            SetStatusText -message "Error: Not enough free space for mounting WIM." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Not enough free space for mounting WIM."
+            return
+        }
+    
         Write-Host "Starting AddDriversToImage process..." -ForegroundColor $Script:NeutralColor
+        SetStatusText -message "Starting driver injection process..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
-        # Step 1: Check and convert .esd to .wim if necessary
-        Write-Host "Step 1: Checking if ImageFile needs conversion from .esd to .wim..." -ForegroundColor $Script:NeutralColor
-        SetStatusText -message "Step 1: Checking and converting ImageFile if needed..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
+        # Step 1: Convert ESD to WIM if needed
         $ImageFile = ConvertEsdToWim -ImageFile $ImageFile
         if (-not $ImageFile) {
-            Write-Host "Error: ImageFile conversion failed. Aborting process." -ForegroundColor $Script:ErrorColor
-            SetStatusText -message "Error: ImageFile conversion failed." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            SetStatusText -message "Error: Failed to convert ImageFile." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Failed to convert ImageFile."
             return
         }
-        Write-Host "ImageFile is ready: $ImageFile" -ForegroundColor $Script:SuccessColor
-        SetStatusText -message "Step 1 completed: ImageFile is ready: $ImageFile" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
-        # Step 2: Export current system drivers
-        Write-Host "Step 2: Exporting current system drivers to $ExportDir..." -ForegroundColor $Script:NeutralColor
-        SetStatusText -message "Step 2: Exporting current system drivers..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
-        if (!(Test-Path -Path $ExportDir)) {
-            Write-Host "Export directory not found. Creating $ExportDir..." -ForegroundColor $Script:NeutralColor
-            New-Item -ItemType Directory -Path $ExportDir -Force | Out-Null
+        # Step 2: Export drivers
+        if (!(Test-Path -Path $DriversDir)) {
+            New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
         }
+    
+        Write-Host "Exporting drivers to external folder: $DriversDir..."
+        SetStatusText -message "Exporting drivers to external folder: $DriversDir..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
         try {
-            Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$ExportDir" -NoNewWindow -Wait
-            Write-Host "Drivers exported successfully to $ExportDir" -ForegroundColor $Script:SuccessColor
-            SetStatusText -message "Step 2 completed: Drivers exported successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$DriversDir" -NoNewWindow -Wait
+            Write-Host "Drivers exported successfully to $DriversDir."
+            SetStatusText -message "Drivers exported successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
         }
         catch {
-            Write-Host "Error: Failed to export drivers. $_" -ForegroundColor $Script:ErrorColor
-            SetStatusText -message "Error: Failed to export drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error exporting drivers: $_"
             return
         }
     
-        # Step 3: Mount the WIM image
-        Write-Host "Step 3: Mounting the WIM image at $MountDir..." -ForegroundColor $Script:NeutralColor
-        SetStatusText -message "Step 3: Mounting the WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
+        # Step 3: Mount the WIM
         if (-not (MountWimImage -WimFile $ImageFile -MountDir $MountDir)) {
-            Write-Host "Error: Failed to mount WIM image." -ForegroundColor $Script:ErrorColor
+            Write-Host "Error: Failed to mount WIM image."
             SetStatusText -message "Error: Failed to mount WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
-        Write-Host "WIM image mounted successfully at $MountDir" -ForegroundColor $Script:SuccessColor
-        SetStatusText -message "Step 3 completed: WIM image mounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
-        # Step 4: Add drivers to the mounted WIM image
-        Write-Host "Step 4: Adding drivers to the mounted WIM image..." -ForegroundColor $Script:NeutralColor
-        SetStatusText -message "Step 4: Adding drivers to the WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+        # Step 4: Inject drivers
+        Write-Host "Adding drivers to WIM image..."
+        SetStatusText -message "Adding drivers to WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
-        if (-not (AddDriversToDriverStore -DriverPath $ExportDir -MountDir $MountDir)) {
-            Write-Host "Error: Failed to add drivers to WIM image." -ForegroundColor $Script:ErrorColor
+        if (-not (AddDriversToDriverStore -DriverPath $DriversDir -MountDir $MountDir)) {
+            Write-Host "Error: Failed to add drivers to WIM image."
             SetStatusText -message "Error: Failed to add drivers to WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
-        Write-Host "Drivers added successfully to the WIM image." -ForegroundColor $Script:SuccessColor
-        SetStatusText -message "Step 4 completed: Drivers added successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
-        # Step 5: Commit changes and unmount the WIM image
-        Write-Host "Step 5: Committing changes and unmounting the WIM image..." -ForegroundColor $Script:NeutralColor
-        SetStatusText -message "Step 5: Committing changes and unmounting the WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
+        # Step 5: Unmount and commit
         if (-not (CommitAndUnmountWim -MountDir $MountDir)) {
-            Write-Host "Error: Failed to unmount the WIM image. Manual cleanup may be required." -ForegroundColor $Script:ErrorColor
-            SetStatusText -message "Error: Failed to unmount the WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error: Failed to unmount WIM image."
+            SetStatusText -message "Error: Failed to unmount WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
-        Write-Host "WIM image unmounted and changes committed successfully." -ForegroundColor $Script:SuccessColor
-        SetStatusText -message "Step 5 completed: WIM image unmounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
-        Write-Host "AddDriversToImage process completed successfully!" -ForegroundColor $Script:SuccessColor
+        # Step 6: Copy updated WIM back to the working directory
+        Write-Host "Copying updated WIM to $WimDestination..."
+        SetStatusText -message "Copying updated WIM to $WimDestination..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
+        try {
+            Copy-Item -Path $ImageFile -Destination $WimDestination -Force
+            Write-Host "Updated WIM copied to $WimDestination successfully."
+            SetStatusText -message "Updated WIM copied to working directory successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+        }
+        catch {
+            Write-Host "Error copying updated WIM: $_"
+            SetStatusText -message "Error copying updated WIM: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return
+        }
+    
+        # Step 7: Clean up the WIMMount directory
+        Write-Host "Cleaning up WIMMount directory: $MountDir..."
+        SetStatusText -message "Cleaning up WIMMount directory..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
+        try {
+            Remove-Item -Path $MountDir -Recurse -Force
+            Write-Host "WIMMount directory cleaned up successfully."
+            SetStatusText -message "WIMMount directory cleaned up successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+        }
+        catch {
+            Write-Host "Error cleaning up WIMMount directory: $_"
+            SetStatusText -message "Error cleaning up WIMMount directory: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+        }
+    
+        Write-Host "Driver injection process completed successfully!" -ForegroundColor $Script:SuccessColor
+        SetStatusText -message "Driver injection completed successfully!" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     }
     
     
@@ -650,66 +780,98 @@ if ($readerOperationSuccessful) {
         [System.Windows.Forms.Application]::DoEvents()  # Refresh the UI
     }
 
-# Function to download and validate oscdimg
-function DownloadOscdimg {
-    SetStatusText -message "Preparing to download oscdimg..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-    [System.Windows.Forms.Application]::DoEvents()
-
-    $adkOscdimgPath = "C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg"
-    $oscdimgFullPath = Join-Path -Path $adkOscdimgPath -ChildPath "oscdimg.exe"
-
-    # Ensure the ADK directory exists
-    if (!(Test-Path -Path $adkOscdimgPath)) {
-        New-Item -ItemType Directory -Path $adkOscdimgPath -Force | Out-Null
-        SetStatusText -message "Created directory for oscdimg at: $adkOscdimgPath" -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-        [System.Windows.Forms.Application]::DoEvents()
-    }
-
-    # Download oscdimg to the ADK path
-    try {
-        SetStatusText -message "Downloading oscdimg from: $oscdimgURL" -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+    # Function to download and validate oscdimg
+    function DownloadOscdimg {
+        SetStatusText -message "Preparing to download oscdimg..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
         [System.Windows.Forms.Application]::DoEvents()
 
-        (New-Object System.Net.WebClient).DownloadFile($oscdimgURL, $oscdimgFullPath)
-        Write-Host "oscdimg downloaded successfully from: $oscdimgURL"
+        $adkOscdimgPath = "C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg"
+        $oscdimgFullPath = Join-Path -Path $adkOscdimgPath -ChildPath "oscdimg.exe"
 
-        # Verify the file's hash
-        $actualHash = Get-FileHashValue -filePath $oscdimgFullPath
-        if ($actualHash -ne $expectedHash) {
-            SetStatusText -message "Hash mismatch! oscdimg may not be from Microsoft." -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
-            Write-Host "Expected Hash: $expectedHash"
-            Write-Host "Actual Hash: $actualHash"
-            Remove-Item -Path $oscdimgFullPath -Force
-            return
+        # Ensure the ADK directory exists
+        if (!(Test-Path -Path $adkOscdimgPath)) {
+            New-Item -ItemType Directory -Path $adkOscdimgPath -Force | Out-Null
+            SetStatusText -message "Created directory for oscdimg at: $adkOscdimgPath" -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+            [System.Windows.Forms.Application]::DoEvents()
         }
 
-        # File is valid, enable the Create ISO button
-        SetStatusText -message "oscdimg verified and ready for use." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-        $GetoscdimgButton.IsEnabled = $false
-        $CreateISOButton.IsEnabled = $true
-    } catch {
-        SetStatusText -message "Failed to download oscdimg: $($_.Exception.Message)" -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
-    }
+        # Download oscdimg to the ADK path
+        try {
+            SetStatusText -message "Downloading oscdimg from: $oscdimgURL" -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+            [System.Windows.Forms.Application]::DoEvents()
 
-    [System.Windows.Forms.Application]::DoEvents()
-}
+        (New-Object System.Net.WebClient).DownloadFile($oscdimgURL, $oscdimgFullPath)
+            Write-Host "oscdimg downloaded successfully from: $oscdimgURL"
+
+            # Verify the file's hash
+            $actualHash = Get-FileHashValue -filePath $oscdimgFullPath
+            if ($actualHash -ne $expectedHash) {
+                SetStatusText -message "Hash mismatch! oscdimg may not be from Microsoft." -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
+                Write-Host "Expected Hash: $expectedHash"
+                Write-Host "Actual Hash: $actualHash"
+                Remove-Item -Path $oscdimgFullPath -Force
+                return
+            }
+
+            # File is valid, enable the Create ISO button
+            SetStatusText -message "oscdimg verified and ready for use." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+            $GetoscdimgButton.IsEnabled = $false
+            $CreateISOButton.IsEnabled = $true
+        }
+        catch {
+            SetStatusText -message "Failed to download oscdimg: $($_.Exception.Message)" -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
+        }
+
+        [System.Windows.Forms.Application]::DoEvents()
+    }
 
     # Define the location selection function
     function SelectNewISOLocation {
-        # Prompt the user for ISO save location
-        $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-        $SaveFileDialog.Filter = "ISO Files (*.iso)|*.iso"
-        $SaveFileDialog.Title = "Save the new ISO file"
+        # Ensure the working directory is set and exists
+        if (-not $Script:WorkingDirectory -or -not (Test-Path -Path $Script:WorkingDirectory)) {
+            [System.Windows.MessageBox]::Show(
+                "Working directory is not set or does not exist. Please select a valid working directory first.", 
+                "Missing Working Directory", 
+                [System.Windows.MessageBoxButton]::OK, 
+                [System.Windows.MessageBoxImage]::Error
+            )
+            return
+        }
     
-        if ($SaveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            $Script:ISOPath = $SaveFileDialog.FileName
-            SetStatusText -message "Location selected. Ready to Create ISO." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-        
-            # Update the TextBox with the selected path and enable the Create ISO button
-            $CreateISOTextBox.Text = $Script:ISOPath
-            $CreateISOButton.IsEnabled = $true
+        # Calculate the size of the working directory
+        $workingDirSize = (Get-ChildItem -Path $Script:WorkingDirectory -Recurse | Measure-Object -Property Length -Sum).Sum
+        $requiredSpace = $workingDirSize + 1GB
+    
+        # Prompt the user to select the save location for the new ISO file
+        $Script:ISOPath = SelectLocation -Mode "File" -Title "Save the new ISO file" -Filter "ISO Files (*.iso)|*.iso"
+    
+        if ($Script:ISOPath) {
+            # Get the drive or partition of the selected ISO path
+            $drive = Get-PSDrive -Name (Split-Path -Qualifier $Script:ISOPath)
+    
+            # Check if there's sufficient space available
+            if ($drive.Free -ge $requiredSpace) {
+                # Update the TextBox with the selected save location
+                $CreateISOTextBox.Text = $Script:ISOPath
+                $CreateISOButton.IsEnabled = $true
+            }
+            else {
+                # Reset the ISO path and show an error message
+                $Script:ISOPath = $null
+                $CreateISOTextBox.Text = "Insufficient space. Please select a location with at least $([math]::Round($requiredSpace / 1GB, 2)) GB free space."
+                
+                # Display a popup message
+                [System.Windows.MessageBox]::Show(
+                    "The selected drive/partition does not have enough space. Please select a different location.", 
+                    "Insufficient Space", 
+                    [System.Windows.MessageBoxButton]::OK, 
+                    [System.Windows.MessageBoxImage]::Error
+                )
+            }
         }
     }
+    
+    
 
     # Updated CreateISO function
     function CreateISO {
@@ -740,14 +902,14 @@ function DownloadOscdimg {
         }
     }
 
-
     # Attach Event Handlers after functions are defined
     $window.Add_MouseLeftButtonDown({ Window_MouseLeftButtonDown $args[0] $args[1] })
-    $SelectISOButton.Add_Click({ SelectISO_Click })
+    $SelectWorkingDirectoryButton.Add_Click({ SelectWorkingDirectory })
+    $SelectISOButton.Add_Click({ SelectISO })
+    $StartISOExtractionButton.Add_Click({ StartISOExtraction })
     $DownloadWin10Button.Add_Click({ DownloadWindows10ISO })
     $DownloadWin11Button.Add_Click({ DownloadWindows11ISO })
-
-    $CloseButton.Add_Click({ Close_Click })
+    $CloseButton.Add_Click({ CleanupAndExit })
     $DownloadUWXMLButton.Add_Click({ DownloadUWXML })
     $SelectXMLFileButton.Add_Click({ SelectXMLFile })
     $AddDriversToImageButton.Add_Click({ AddDriversToImage })
