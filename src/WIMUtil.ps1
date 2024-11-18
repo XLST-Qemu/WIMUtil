@@ -581,12 +581,11 @@ if ($readerOperationSuccessful) {
         }
     
         try {
-            # Ensure paths with spaces are properly quoted
-            $quotedWimFile = "`"$WimFile`""
-            $quotedMountDir = "`"$MountDir`""
+            $WimFile = "`"$WimFile`""
+            $MountDir = "`"$MountDir`""
             SetStatusText -message "Mounting WIM image: $WimFile to $MountDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Mounting WIM image: $WimFile to $MountDir..."
-            Start-Process -FilePath "dism" -ArgumentList "/mount-wim /wimfile:$quotedWimFile /index:1 /mountdir:$quotedMountDir" -NoNewWindow -Wait
+            Start-Process -FilePath "dism" -ArgumentList "/mount-wim /wimfile:$WimFile /index:1 /mountdir:$MountDir" -NoNewWindow -Wait
             SetStatusText -message "WIM image mounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "WIM image mounted successfully."
             return $true
@@ -598,7 +597,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-    
 
     function AddDriversToDriverStore {
         param (
@@ -607,13 +605,12 @@ if ($readerOperationSuccessful) {
         )
     
         try {
-            # Ensure paths with spaces are properly quoted
-            $quotedDriverPath = "`"$DriverPath`""
-            $quotedMountDir = "`"$MountDir`""
+            $DriverPath = "`"$DriverPath`""
+            $MountDir = "`"$MountDir`""
             SetStatusText -message "Adding drivers from $DriverPath to the Driver Store in $MountDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-            Start-Process -FilePath "dism" -ArgumentList "/image:$quotedMountDir /add-driver /driver:$quotedDriverPath /recurse" -NoNewWindow -Wait
+            Start-Process -FilePath "dism" -ArgumentList "/image:$MountDir /add-driver /driver:$DriverPath /recurse" -NoNewWindow -Wait
             SetStatusText -message "Drivers added to the Driver Store successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            Write-Host "Drivers added to the Driver Store successfully."
             return $true
         }
         catch {
@@ -623,7 +620,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-
     function CommitAndUnmountWim {
         param (
             [string]$MountDir   # Path to the mount directory
@@ -648,7 +644,7 @@ if ($readerOperationSuccessful) {
             [string]$ImageFile = (Join-Path -Path $Script:WorkingDirectory -ChildPath "sources\install.esd"), # Default ImageFile
             [string]$MountParentDir = (Split-Path -Parent $Script:WorkingDirectory) # Default to parent of working directory
         )
-        
+    
         # Validate input parameters
         if (-not $WorkingDirectory) {
             SetStatusText -message "Error: Working directory is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
@@ -764,7 +760,9 @@ if ($readerOperationSuccessful) {
         SetStatusText -message "Copying updated WIM to $WimDestination..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
         try {
-            Copy-Item -Path $ImageFile -Destination $WimDestination -Force
+            if ($ImageFile -ne $WimDestination) {
+                Copy-Item -Path $ImageFile -Destination $WimDestination -Force
+            }
             Write-Host "Updated WIM copied to $WimDestination successfully."
             SetStatusText -message "Updated WIM copied to working directory successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
         }
@@ -791,9 +789,6 @@ if ($readerOperationSuccessful) {
         Write-Host "Driver injection process completed successfully!" -ForegroundColor $Script:SuccessColor
         SetStatusText -message "Driver injection completed successfully!" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     }
-    
-    
-    
     
     function AddRecommendedDrivers {
         SetStatusText -message "Checking for driver directory..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
