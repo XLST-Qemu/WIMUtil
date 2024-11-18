@@ -221,18 +221,29 @@ if ($readerOperationSuccessful) {
 
     # Close button function
     function CleanupAndExit {
-        # Check if the working directory is set and exists
-        if ($Script:WorkingDirectory -and (Test-Path -Path $Script:WorkingDirectory)) {
-            # Show a confirmation popup to ask for cleanup
-            $result = [System.Windows.MessageBox]::Show(
-                "Do you want to clean up the working directory to free up space? (Drivers folder will not be deleted; please remove manually if needed.)", 
-                "Cleanup Confirmation", 
-                [System.Windows.MessageBoxButton]::YesNo, 
-                [System.Windows.MessageBoxImage]::Question
-            )
-        
-            # If the user chooses "Yes," attempt to delete the working directory
-            if ($result -eq [System.Windows.MessageBoxResult]::Yes) {
+        # Check if the working directory or drivers folder exists
+        $DriversDir = Join-Path -Path (Split-Path -Parent $Script:WorkingDirectory) -ChildPath "Drivers"
+        $workingDirExists = $Script:WorkingDirectory -and (Test-Path -Path $Script:WorkingDirectory)
+        $driversDirExists = Test-Path -Path $DriversDir
+    
+        # If neither directory exists, skip the cleanup prompt
+        if (-not $workingDirExists -and -not $driversDirExists) {
+            Write-Host "No directories to clean up. Exiting without cleanup prompt."
+            $window.Close()
+            return
+        }
+    
+        # Show a confirmation popup to ask for cleanup
+        $result = [System.Windows.MessageBox]::Show(
+            "Do you want to clean up the working directory to free up space? (Drivers folder will not be deleted; please remove manually if needed.)", 
+            "Cleanup Confirmation", 
+            [System.Windows.MessageBoxButton]::YesNo, 
+            [System.Windows.MessageBoxImage]::Question
+        )
+    
+        # If the user chooses "Yes," attempt to delete the working directory
+        if ($result -eq [System.Windows.MessageBoxResult]::Yes) {
+            if ($workingDirExists) {
                 try {
                     Remove-Item -Path $Script:WorkingDirectory -Recurse -Force
                     Write-Host "Working directory cleaned up successfully."
@@ -242,12 +253,11 @@ if ($readerOperationSuccessful) {
                 }
             }
         }
-        
+    
         # Close the application
         $window.Close()
     }
-    
-    
+  
 
     # Helper Functions
     function UpdateStartISOExtractionButtonState {
@@ -363,11 +373,20 @@ if ($readerOperationSuccessful) {
             return
         }
     
-        # Calculate the required free space
-        $requiredSpace = 10GB
-        $drive = Get-PSDrive -Name (Split-Path -Qualifier $Script:WorkingDirectory)
+        # Extract and validate the drive
+        $driveLetter = (Split-Path -Qualifier $Script:WorkingDirectory).TrimEnd(":")
+        try {
+            $drive = Get-PSDrive -Name $driveLetter
+            if (-not $drive) {
+                throw "Drive not found for the selected directory."
+            }
+        } catch {
+            SetStatusText -message "Error determining free space for the selected directory. Please try again." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
+            return
+        }
     
         # Check if the drive has enough free space
+        $requiredSpace = 10GB
         if ($drive.Free -ge $requiredSpace) {
             SetStatusText -message "Sufficient space available. Preparing working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
             [System.Windows.Forms.Application]::DoEvents()
@@ -421,18 +440,16 @@ if ($readerOperationSuccessful) {
                 $NextButton.IsEnabled = $true
             }
             catch {
-                # Handle any errors during extraction
                 SetStatusText -message "Extraction failed: $_" -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
                 Dismount-DiskImage -ImagePath $Script:SelectedISO -ErrorAction SilentlyContinue
             }
-        }
-        else {
-            # Insufficient space error
+        } else {
             SetStatusText -message "Not enough space on the selected drive for extraction." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
             [System.Windows.Forms.Application]::DoEvents()
         }
     }
+    
     
     # Download ISO functions
     function DownloadWindows10ISO {
@@ -941,34 +958,17 @@ if ($readerOperationSuccessful) {
     $CreateISOButton.Add_Click({ CreateISO })
 
     # Event handler for the Next button
-    # Next button to navigate to the next screen
     $NextButton.Add_Click({
-            if ($script:currentScreenIndex -eq 4) {
-                # Show a confirmation popup when "Exit" is clicked on the last screen
-                $result = [System.Windows.MessageBox]::Show("Do you want to clean up the working directory to free up space?", 
-                    "Cleanup Confirmation", 
-                    [System.Windows.MessageBoxButton]::YesNo, 
-                    [System.Windows.MessageBoxImage]::Question)
-    
-                if ($result -eq [System.Windows.MessageBoxResult]::Yes) {
-                    try {
-                        Remove-Item -Path "C:\WIMUtil" -Recurse -Force
-                        Write-Host "Working directory cleaned up successfully."
-                    }
-                    catch {
-                        Write-Host "Failed to clean up the working directory: $_"
-                    }
-                }
-    
-                # Close the application after cleanup
-                $window.Close()
-            }
-            else {
-                # Increment to the next screen and show it
-                $script:currentScreenIndex++
-                ShowScreen
-            }
-        })
+        if ($script:currentScreenIndex -eq 4) {
+            # On the last screen, execute the CleanupAndExit function for "Exit"
+            CleanupAndExit
+        }
+        else {
+            # Increment to the next screen and show it
+            $script:currentScreenIndex++
+            ShowScreen
+        }
+    })
     
     
     # Event handler for the Back button
