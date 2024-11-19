@@ -264,8 +264,12 @@ if ($readerOperationSuccessful) {
         param (
             [string]$Path
         )
-        return "`"$Path`""
+        if ($Path -notmatch '^\s*".*"\s*$' -and $Path -match '\s') {
+            return "`"$Path`""
+        }
+        return $Path
     }
+    
     
     function UpdateStartISOExtractionButtonState {
         if ($Script:SelectedISO -and $Script:WorkingDirectory) {
@@ -554,11 +558,13 @@ if ($readerOperationSuccessful) {
                 SetStatusText -message "Conversion to .wim completed successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
                 [System.Windows.Forms.Application]::DoEvents()
         
-                # Delete the original ESD file
-                Write-Host "Deleting original .esd file: $ImageFile..."
-                Remove-Item -Path $ImageFile -Force
-                Write-Host "Original .esd file deleted successfully."
-                SetStatusText -message "Original .esd file deleted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+                # Delete the original ESD file if it exists
+                if (Test-Path -Path $ImageFile) {
+                    Write-Host "Deleting original .esd file: $ImageFile..."
+                    Remove-Item -Path $ImageFile -Force
+                    Write-Host "Original .esd file deleted successfully."
+                    SetStatusText -message "Original .esd file deleted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+                }
         
                 return $convertedWimFile
             }
@@ -573,15 +579,21 @@ if ($readerOperationSuccessful) {
         }
     }
     
-    
     function MountWimImage {
         param (
             [string]$WimFile, # Path to the WIM file
             [string]$MountDir   # Path to the mount directory
         )
         
+        # Ensure the mount directory exists
         if (!(Test-Path -Path $MountDir)) {
-            New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
+            try {
+                New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
+            }
+            catch {
+                Write-Host "Error: Unable to create mount directory: $MountDir. $_" -ForegroundColor Red
+                return $false
+            }
         }
         
         try {
@@ -600,8 +612,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-    
-
     function AddDriversToDriverStore {
         param (
             [string]$DriverPath, # Path to the exported drivers
@@ -624,7 +634,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-    
     function CommitAndUnmountWim {
         param (
             [string]$MountDir   # Path to the mount directory
@@ -645,73 +654,35 @@ if ($readerOperationSuccessful) {
         }
     }
     
+    
     function AddDriversToImage {
         param (
-            [string]$WorkingDirectory = $Script:WorkingDirectory, # Default to global variable if not provided
-            [string]$ImageFile = (Join-Path -Path $Script:WorkingDirectory -ChildPath "sources\install.esd"), # Default ImageFile
-            [string]$MountParentDir = (Split-Path -Parent $Script:WorkingDirectory) # Default to parent of working directory
+            [string]$WorkingDirectory = $Script:WorkingDirectory,
+            [string]$ImageFile = (Join-Path -Path $Script:WorkingDirectory -ChildPath "sources\install.esd"),
+            [string]$MountParentDir = (Split-Path -Parent $Script:WorkingDirectory)
         )
         
         # Validate input parameters
-        if (-not $WorkingDirectory) {
-            SetStatusText -message "Error: Working directory is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error: Working directory is not set."
+        if (-not $WorkingDirectory -or -not $ImageFile -or -not $MountParentDir) {
+            Write-Host "Error: Required parameters are missing." -ForegroundColor Red
             return
         }
-    
-        if (-not $ImageFile) {
-            SetStatusText -message "Error: Image file is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error: Image file is not set."
-            return
-        }
-    
-        if (-not $MountParentDir) {
-            SetStatusText -message "Error: Mount parent directory is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error: Mount parent directory is not set."
-            return
-        }
-    
+        
         # Define paths
         $DriversDir = Join-Path -Path (Split-Path -Parent $WorkingDirectory) -ChildPath "Drivers"
         $MountDir = Join-Path -Path $MountParentDir -ChildPath "WIMMount"
-        $WimDestination = Join-Path -Path (Join-Path -Path $WorkingDirectory -ChildPath "sources") -ChildPath "install.wim"
+        $WimDestination = Join-Path -Path $WorkingDirectory -ChildPath "sources\install.wim"
     
-        # Validate mount directory and working directory
-        if ($MountDir -eq $WorkingDirectory) {
-            SetStatusText -message "Error: Mount directory cannot be the same as the working directory." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error: Mount directory cannot be the same as the working directory."
-            return
-        }
+        # Ensure paths are quoted where necessary
+        $quotedDriversDir = QuotePath $DriversDir
+        $quotedMountDir = QuotePath $MountDir
+        $quotedImageFile = QuotePath $ImageFile
+        $quotedWimDestination = QuotePath $WimDestination
     
-        # Check free space (10GB minimum)
-        $driveLetter = (Split-Path -Qualifier $MountParentDir).TrimEnd(":")
-        try {
-            $drive = Get-PSDrive -Name $driveLetter
-            if (-not $drive) {
-                throw "Drive not found for the mount parent directory."
-            }
-        }
-        catch {
-            SetStatusText -message "Error: Could not determine free space for the selected mount parent directory." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error: Could not determine free space for the selected mount parent directory."
-            return
-        }
-    
-        if ($drive.Free -lt 10GB) {
-            SetStatusText -message "Error: Not enough free space for mounting WIM." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error: Not enough free space for mounting WIM."
-            return
-        }
-    
-        # Start the driver injection process
-        Write-Host "Starting AddDriversToImage process..." -ForegroundColor $Script:NeutralColor
-        SetStatusText -message "Starting driver injection process..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
-        # Step 1: Convert ESD to WIM if needed
+        # Step 1: Convert ESD to WIM
         $ImageFile = ConvertEsdToWim -ImageFile $ImageFile
         if (-not $ImageFile) {
-            SetStatusText -message "Error: Failed to convert ImageFile." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error: Failed to convert ImageFile."
+            Write-Host "Error: Failed to convert ESD to WIM." -ForegroundColor Red
             return
         }
     
@@ -720,80 +691,74 @@ if ($readerOperationSuccessful) {
             New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
         }
     
-        Write-Host "Exporting drivers to external folder: $DriversDir..."
-        SetStatusText -message "Exporting drivers to external folder: $DriversDir..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
+        Write-Host "Exporting drivers to $DriversDir..."
         try {
-            $quotedDriversDir = QuotePath $DriversDir
             Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$quotedDriversDir" -NoNewWindow -Wait
-            Write-Host "Drivers exported successfully to $DriversDir."
-            SetStatusText -message "Drivers exported successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Drivers exported successfully."
         }
         catch {
-            SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error exporting drivers: $_"
+            Write-Host "Error exporting drivers: $_" -ForegroundColor Red
             return
         }
     
         # Step 3: Mount the WIM
-        $quotedMountDir = QuotePath $MountDir
-        $quotedImageFile = QuotePath $ImageFile
-        if (-not (MountWimImage -WimFile $quotedImageFile -MountDir $quotedMountDir)) {
-            Write-Host "Error: Failed to mount WIM image."
-            SetStatusText -message "Error: Failed to mount WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+        if (!(Test-Path -Path $MountDir)) {
+            New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
+        }
+    
+        Write-Host "Mounting WIM image..."
+        try {
+            Start-Process -FilePath "dism" -ArgumentList "/mount-wim /wimfile:$quotedImageFile /index:1 /mountdir:$quotedMountDir" -NoNewWindow -Wait
+        }
+        catch {
+            Write-Host "Error mounting WIM: $_" -ForegroundColor Red
             return
         }
     
         # Step 4: Inject drivers
-        Write-Host "Adding drivers to WIM image..."
-        SetStatusText -message "Adding drivers to WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
-        if (-not (AddDriversToDriverStore -DriverPath $quotedDriversDir -MountDir $quotedMountDir)) {
-            Write-Host "Error: Failed to add drivers to WIM image."
-            SetStatusText -message "Error: Failed to add drivers to WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+        Write-Host "Adding drivers to WIM..."
+        try {
+            Start-Process -FilePath "dism" -ArgumentList "/image:$quotedMountDir /add-driver /driver:$quotedDriversDir /recurse" -NoNewWindow -Wait
+        }
+        catch {
+            Write-Host "Error adding drivers: $_" -ForegroundColor Red
             return
         }
     
         # Step 5: Unmount and commit
-        if (-not (CommitAndUnmountWim -MountDir $quotedMountDir)) {
-            Write-Host "Error: Failed to unmount WIM image."
-            SetStatusText -message "Error: Failed to unmount WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+        Write-Host "Committing and unmounting WIM..."
+        try {
+            Start-Process -FilePath "dism" -ArgumentList "/unmount-wim /mountdir:$quotedMountDir /commit" -NoNewWindow -Wait
+        }
+        catch {
+            Write-Host "Error unmounting WIM: $_" -ForegroundColor Red
             return
         }
     
-        # Step 6: Copy updated WIM back to the working directory
-        Write-Host "Copying updated WIM to $WimDestination..."
-        SetStatusText -message "Copying updated WIM to $WimDestination..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
+        # Step 6: Copy updated WIM
+        Write-Host "Copying updated WIM..."
         try {
-            $quotedWimDestination = QuotePath $WimDestination
-            Copy-Item -Path $ImageFile -Destination $quotedWimDestination -Force
-            Write-Host "Updated WIM copied to $WimDestination successfully."
-            SetStatusText -message "Updated WIM copied to working directory successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Copy-Item -Path $ImageFile -Destination $WimDestination -Force
         }
         catch {
-            Write-Host "Error copying updated WIM: $_"
-            SetStatusText -message "Error copying updated WIM: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error copying WIM: $_" -ForegroundColor Red
             return
         }
     
-        # Step 7: Clean up the WIMMount directory
-        Write-Host "Cleaning up WIMMount directory: $MountDir..."
-        SetStatusText -message "Cleaning up WIMMount directory..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-    
+        # Step 7: Clean up mount directory
+        Write-Host "Cleaning up mount directory..."
         try {
-            Remove-Item -Path $MountDir -Recurse -Force
-            Write-Host "WIMMount directory cleaned up successfully."
-            SetStatusText -message "WIMMount directory cleaned up successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            if (Test-Path -Path $MountDir) {
+                Remove-Item -Path $MountDir -Recurse -Force
+            }
         }
         catch {
-            Write-Host "Error cleaning up WIMMount directory: $_"
-            SetStatusText -message "Error cleaning up WIMMount directory: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Error cleaning up mount directory: $_" -ForegroundColor Red
         }
     
-        Write-Host "Driver injection process completed successfully!" -ForegroundColor $Script:SuccessColor
-        SetStatusText -message "Driver injection completed successfully!" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+        Write-Host "Driver injection process completed successfully!"
     }
+    
     
     
     
