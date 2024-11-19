@@ -596,22 +596,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-        
-        try {
-            $quotedWimFile = QuotePath $WimFile
-            $quotedMountDir = QuotePath $MountDir
-            SetStatusText -message "Mounting WIM image: $quotedWimFile to $quotedMountDir..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-            Start-Process -FilePath "dism" -ArgumentList "/mount-wim /wimfile:$quotedWimFile /index:1 /mountdir:$quotedMountDir" -NoNewWindow -Wait
-            SetStatusText -message "WIM image mounted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "WIM image mounted successfully."
-            return $true
-        }
-        catch {
-            SetStatusText -message "Error mounting WIM image: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Error mounting WIM image: $_"
-            return $false
-        }
-    }
     
     function AddDriversToDriverStore {
         param (
@@ -654,7 +638,6 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
-    
     
     function AddDriversToImage {
         param (
@@ -759,9 +742,6 @@ if ($readerOperationSuccessful) {
     
         Write-Host "Driver injection process completed successfully!"
     }
-    
-    
-    
     
     function AddRecommendedDrivers {
         SetStatusText -message "Checking for driver directory..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
