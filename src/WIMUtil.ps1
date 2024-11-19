@@ -577,6 +577,38 @@ if ($readerOperationSuccessful) {
         return $ImageFile
     }
     
+
+    function ExportDrivers {
+        param (
+            [string]$DriversDir # Path to the directory where drivers will be exported
+        )
+    
+        # Ensure the target directory exists
+        if (!(Test-Path -Path $DriversDir)) {
+            New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
+        }
+    
+        SetStatusText -message "Exporting drivers to $DriversDir..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+        Write-Host "Exporting drivers to $DriversDir..."
+    
+        try {
+            # Quote the directory path to handle spaces
+            $quotedDriversDir = QuotePath -Path $DriversDir
+    
+            # Execute the DISM command to export drivers
+            Start-Process -FilePath 'dism' -ArgumentList "/online /export-driver /destination:$quotedDriversDir" -NoNewWindow -Wait
+    
+            SetStatusText -message "Drivers exported successfully to $DriversDir." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Drivers exported successfully to $DriversDir."
+            return $true
+        }
+        catch {
+            SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Error "Error exporting drivers: $_"
+            return $false
+        }
+    }
+  
     function MountWimImage {
         param (
             [string]$WimFile,
@@ -669,7 +701,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-    
     function AddDriversToImage {
         param (
             [string]$WorkingDirectory = $Script:WorkingDirectory,
@@ -700,28 +731,11 @@ if ($readerOperationSuccessful) {
         }
     
         # Step 2: Export Drivers
-        if (!(Test-Path -Path $DriversDir)) {
-            New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
-        }
-
-        SetStatusText -message 'Exporting drivers...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-        Write-Host "Exporting drivers to $DriversDir..."
-
-        try {
-            # Ensure the DriversDir path is quoted
-            $quotedDriversDir = QuotePath -Path $DriversDir
-
-            # Construct and execute the DISM command
-            Start-Process -FilePath 'dism' -ArgumentList "/online /export-driver /destination:$quotedDriversDir" -NoNewWindow -Wait
-
-            SetStatusText -message 'Drivers exported successfully.' -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        }
-        catch {
-            SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Error "Error exporting drivers: $_"
+        if (-not (ExportDrivers -DriversDir $DriversDir)) {
+            Write-Error "Error: Failed to export drivers."
             return $false
         }
-    
+
         # Step 3: Mount the WIM
         if (!(Test-Path -Path $MountDir)) {
             New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
