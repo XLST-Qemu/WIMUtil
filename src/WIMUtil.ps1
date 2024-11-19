@@ -651,7 +651,7 @@ if ($readerOperationSuccessful) {
             Write-Host "Error: Working directory is not set."
             return
         }
-    
+        
         if (-not $ImageFile) {
             SetStatusText -message "Error: Image file is not set." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Error: Image file is not set."
@@ -717,9 +717,7 @@ if ($readerOperationSuccessful) {
         SetStatusText -message "Exporting drivers to external folder: $DriversDir..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
         try {
-            # Ensure paths with spaces are properly quoted
-            $quotedDriversDir = "`"$DriversDir`""
-            Start-Process -FilePath "dism" -ArgumentList "/online /export-driver /destination:$quotedDriversDir" -NoNewWindow -Wait
+            Start-Process -FilePath "dism" -ArgumentList "/online", "/export-driver", "/destination:`"$DriversDir`"" -NoNewWindow -Wait
             Write-Host "Drivers exported successfully to $DriversDir."
             SetStatusText -message "Drivers exported successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
         }
@@ -730,9 +728,7 @@ if ($readerOperationSuccessful) {
         }
     
         # Step 3: Mount the WIM
-        $quotedMountDir = "`"$MountDir`""
-        $quotedImageFile = "`"$ImageFile`""
-        if (-not (MountWimImage -WimFile $quotedImageFile -MountDir $quotedMountDir)) {
+        if (-not (MountWimImage -WimFile "`"$ImageFile`"" -MountDir "`"$MountDir`"")) {
             Write-Host "Error: Failed to mount WIM image."
             SetStatusText -message "Error: Failed to mount WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
@@ -742,14 +738,14 @@ if ($readerOperationSuccessful) {
         Write-Host "Adding drivers to WIM image..."
         SetStatusText -message "Adding drivers to WIM image..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
-        if (-not (AddDriversToDriverStore -DriverPath $quotedDriversDir -MountDir $quotedMountDir)) {
+        if (-not (AddDriversToDriverStore -DriverPath "`"$DriversDir`"" -MountDir "`"$MountDir`"")) {
             Write-Host "Error: Failed to add drivers to WIM image."
             SetStatusText -message "Error: Failed to add drivers to WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
         }
     
         # Step 5: Unmount and commit
-        if (-not (CommitAndUnmountWim -MountDir $quotedMountDir)) {
+        if (-not (CommitAndUnmountWim -MountDir "`"$MountDir`"")) {
             Write-Host "Error: Failed to unmount WIM image."
             SetStatusText -message "Error: Failed to unmount WIM image." -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             return
@@ -760,9 +756,7 @@ if ($readerOperationSuccessful) {
         SetStatusText -message "Copying updated WIM to $WimDestination..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
         try {
-            if ($ImageFile -ne $WimDestination) {
-                Copy-Item -Path $ImageFile -Destination $WimDestination -Force
-            }
+            Copy-Item -Path "`"$ImageFile`"" -Destination "`"$WimDestination`"" -Force
             Write-Host "Updated WIM copied to $WimDestination successfully."
             SetStatusText -message "Updated WIM copied to working directory successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
         }
@@ -789,6 +783,7 @@ if ($readerOperationSuccessful) {
         Write-Host "Driver injection process completed successfully!" -ForegroundColor $Script:SuccessColor
         SetStatusText -message "Driver injection completed successfully!" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     }
+    
     
     function AddRecommendedDrivers {
         SetStatusText -message "Checking for driver directory..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
