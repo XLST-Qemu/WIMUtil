@@ -554,7 +554,7 @@ if ($readerOperationSuccessful) {
                 $quotedImageFile = QuotePath $ImageFile
                 $quotedConvertedWimFile = QuotePath $convertedWimFile
                 Write-Host "Validating ESD file integrity..."
-                Start-Process -FilePath "dism" -ArgumentList "/CheckIntegrity /SourceImageFile:$quotedImageFile" -NoNewWindow -Wait
+                Start-Process -FilePath "dism" -ArgumentList "/CheckHealth /SourceImageFile:$quotedImageFile" -NoNewWindow -Wait
                 Write-Host "Converting ESD to WIM..."
                 Start-Process -FilePath "dism" -ArgumentList "/export-image /sourceimagefile:$quotedImageFile /sourceindex:1 /destinationimagefile:$quotedConvertedWimFile /compress:recovery" -NoNewWindow -Wait
                 Write-Host "Conversion completed."
