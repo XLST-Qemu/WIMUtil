@@ -555,8 +555,8 @@ if ($readerOperationSuccessful) {
                 # Log the command for debugging
                 Write-Host "Executing DISM Command: dism $dismCommand"
     
-                # Execute the command
-                Start-Process -FilePath 'dism' -ArgumentList $dismCommand -NoNewWindow -Wait -PassThru
+                # Execute the DISM command
+                Start-Process -FilePath 'dism' -ArgumentList $dismCommand -NoNewWindow -Wait
     
                 Write-Host "Conversion completed successfully."
                 SetStatusText -message "Conversion completed successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
@@ -564,6 +564,9 @@ if ($readerOperationSuccessful) {
                 # Remove the original .esd file
                 Remove-Item -Path $ImageFile -Force
                 Write-Host "Original .esd file deleted successfully."
+    
+                # Return the converted WIM file path
+                Write-Host "Debug: Returning converted WIM file path: $convertedWimFile"
                 return $convertedWimFile
             }
             catch {
@@ -574,8 +577,10 @@ if ($readerOperationSuccessful) {
         }
     
         # If the file is not .esd, return it unmodified
+        Write-Host "Debug: Returning original ImageFile path: $ImageFile"
         return $ImageFile
     }
+    
     
 
     function ExportDrivers {
@@ -745,6 +750,10 @@ if ($readerOperationSuccessful) {
         SetStatusText -message 'Starting ESD-to-WIM conversion...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
         Write-Host 'Starting ESD-to-WIM conversion...'
         $ImageFile = ConvertEsdToWim -ImageFile $ImageFile
+
+        # Debugging output for ImageFile
+        Write-Host "Debug: After conversion, ImageFile is $ImageFile"
+
         if (-not $ImageFile) {
             SetStatusText -message 'Error: Failed to convert ESD to WIM.' -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Error 'Error: Failed to convert ESD to WIM.'
@@ -775,7 +784,6 @@ if ($readerOperationSuccessful) {
             return $false
         }
 
-  
         # Step 4: Add Drivers
         SetStatusText -message 'Adding drivers to WIM...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
         Write-Host 'Adding drivers to WIM...'
