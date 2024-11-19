@@ -279,6 +279,7 @@ if ($readerOperationSuccessful) {
         }
     }
     
+
     function SelectLocation {
         param (
             [string]$Mode = "Folder", # Accepts "Folder" or "File"
@@ -361,9 +362,6 @@ if ($readerOperationSuccessful) {
         UpdateStartISOExtractionButtonState
     }
     
-    
-
-
     # Select ISO function
     function SelectISO {
         $Script:SelectedISO = SelectLocation -Mode "File" -Title "Select an ISO file" -Filter "ISO Files (*.iso)|*.iso"
