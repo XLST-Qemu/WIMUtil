@@ -268,7 +268,7 @@ if ($readerOperationSuccessful) {
             return '"' + $Path + '"'
         }
         return $Path
-    }   
+    }      
     
     function UpdateStartISOExtractionButtonState {
         if ($Script:SelectedISO -and $Script:WorkingDirectory) {
@@ -577,9 +577,6 @@ if ($readerOperationSuccessful) {
         return $ImageFile
     }
     
-    
-       
-    
     function MountWimImage {
         param (
             [string]$WimFile,
@@ -614,8 +611,6 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
-    
-    
     
     function AddDriversToDriverStore {
         param (
@@ -708,11 +703,17 @@ if ($readerOperationSuccessful) {
         if (!(Test-Path -Path $DriversDir)) {
             New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
         }
-    
+
         SetStatusText -message 'Exporting drivers...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
         Write-Host "Exporting drivers to $DriversDir..."
+
         try {
-            Start-Process -FilePath 'dism' -ArgumentList "/online /export-driver /destination:$DriversDir" -NoNewWindow -Wait
+            # Ensure the DriversDir path is quoted
+            $quotedDriversDir = QuotePath -Path $DriversDir
+
+            # Construct and execute the DISM command
+            Start-Process -FilePath 'dism' -ArgumentList "/online /export-driver /destination:$quotedDriversDir" -NoNewWindow -Wait
+
             SetStatusText -message 'Drivers exported successfully.' -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
         }
         catch {
