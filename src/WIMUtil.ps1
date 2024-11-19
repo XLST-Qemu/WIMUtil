@@ -550,15 +550,23 @@ if ($readerOperationSuccessful) {
             SetStatusText -message "Detected .esd file. Converting to .wim: $convertedWimFile" -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
     
             try {
+                # Ensure paths are properly quoted
                 $quotedImageFile = QuotePath -Path $ImageFile
                 $quotedConvertedWimFile = QuotePath -Path $convertedWimFile
     
-                Write-Host "Converting ESD to WIM..."
-                Start-Process -FilePath 'dism' -ArgumentList "/export-image /sourceimagefile:$quotedImageFile /sourceindex:1 /destinationimagefile:$quotedConvertedWimFile /compress:recovery" -NoNewWindow -Wait
+                # Construct the DISM command
+                $dismCommand = "/export-image /sourceimagefile:$quotedImageFile /destinationimagefile:$quotedConvertedWimFile /compress:recovery /CheckIntegrity"
     
-                Write-Host "Conversion completed."
+                # Log the command for debugging
+                Write-Host "Executing DISM Command: dism $dismCommand"
+    
+                # Execute the command
+                Start-Process -FilePath 'dism' -ArgumentList $dismCommand -NoNewWindow -Wait -PassThru
+    
+                Write-Host "Conversion completed successfully."
                 SetStatusText -message "Conversion completed successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
     
+                # Remove the original .esd file
                 Remove-Item -Path $ImageFile -Force
                 Write-Host "Original .esd file deleted successfully."
                 return $convertedWimFile
@@ -569,8 +577,11 @@ if ($readerOperationSuccessful) {
                 return $null
             }
         }
+    
+        # If the file is not .esd, return it unmodified
         return $ImageFile
     }
+    
     
        
     
