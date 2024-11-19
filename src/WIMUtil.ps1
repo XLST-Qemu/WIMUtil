@@ -279,7 +279,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-
     function SelectLocation {
         param (
             [string]$Mode = "Folder", # Accepts "Folder" or "File"
@@ -292,7 +291,6 @@ if ($readerOperationSuccessful) {
             $FolderBrowserDialog.Description = $Title
             $FolderBrowserDialog.ShowNewFolderButton = $true
     
-            # Suppress unwanted output and error messages
             if ($FolderBrowserDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                 return $FolderBrowserDialog.SelectedPath
             }
@@ -302,7 +300,6 @@ if ($readerOperationSuccessful) {
             $OpenFileDialog.Title = $Title
             $OpenFileDialog.Filter = $Filter
     
-            # Suppress unwanted output and error messages
             if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                 return $OpenFileDialog.FileName
             }
@@ -311,11 +308,10 @@ if ($readerOperationSuccessful) {
         return $null # User canceled
     }
     
-    
 
     function SelectWorkingDirectory {
-        # Suppress output and errors for the folder selection dialog
-        $baseDirectory = SelectLocation -Mode "Folder" -Title "Select a directory for working files" > $null 2>&1
+        # Prompt the user to select a working directory
+        $baseDirectory = SelectLocation -Mode "Folder" -Title "Select a directory for working files"
     
         if ($baseDirectory) {
             $Script:WorkingDirectory = Join-Path -Path $baseDirectory -ChildPath "WIMUtil"
@@ -323,8 +319,7 @@ if ($readerOperationSuccessful) {
             # Extract the drive letter and ensure it's valid
             $driveLetter = (Split-Path -Qualifier $baseDirectory).TrimEnd(":")
             try {
-                # Suppress output and errors for drive validation
-                $drive = Get-PSDrive -Name $driveLetter > $null 2>&1
+                $drive = Get-PSDrive -Name $driveLetter
                 if (-not $drive) {
                     throw "Drive not found for the selected directory."
                 }
@@ -345,9 +340,8 @@ if ($readerOperationSuccessful) {
             $requiredSpace = 10GB
             if ($drive.Free -ge $requiredSpace) {
                 # Create the WIMUtil directory if it doesn't already exist
-                # Suppress output for directory creation
                 if (-not (Test-Path -Path $Script:WorkingDirectory)) {
-                    New-Item -ItemType Directory -Path $Script:WorkingDirectory -Force > $null 2>&1
+                    New-Item -ItemType Directory -Path $Script:WorkingDirectory -Force | Out-Null
                 }
     
                 # Update the TextBox with the actual working directory path
@@ -364,28 +358,21 @@ if ($readerOperationSuccessful) {
                 )
             }
         }
-    
         UpdateStartISOExtractionButtonState
     }
     
+    
+
 
     # Select ISO function
     function SelectISO {
-        # Suppress output and errors for the ISO selection dialog
-        $Script:SelectedISO = SelectLocation -Mode "File" -Title "Select an ISO file" -Filter "ISO Files (*.iso)|*.iso" > $null 2>&1
-
+        $Script:SelectedISO = SelectLocation -Mode "File" -Title "Select an ISO file" -Filter "ISO Files (*.iso)|*.iso"
         if ($Script:SelectedISO) {
-            # Log the selected ISO silently
             Write-Host "Selected ISO: $Script:SelectedISO"
-
-            # Update the TextBox with the selected ISO path
             $ISOPathTextBox.Text = "Windows ISO file selected at $Script:SelectedISO"
         }
-
-        # Update button state after selection
         UpdateStartISOExtractionButtonState
     }
-
     
     
     # Function to extract ISO
@@ -548,6 +535,8 @@ if ($readerOperationSuccessful) {
         [System.Windows.Forms.Application]::DoEvents()
     }
     
+    
+
     function ConvertEsdToWim {
         param (
             [string]$ImageFile
