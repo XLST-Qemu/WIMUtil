@@ -621,6 +621,13 @@ if ($readerOperationSuccessful) {
             return $false
         }
     
+        # Validate WimFile
+        if ($WimFile -isnot [string]) {
+            Write-Error "Error: WimFile parameter is not a valid string. Value: $WimFile"
+            SetStatusText -message "Error: WimFile parameter is not valid. Value: $WimFile" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return $false
+        }
+    
         # Verify that the WIM file exists
         if (!(Test-Path -Path $WimFile)) {
             Write-Error "Error: WIM file not found at $WimFile"
@@ -655,6 +662,7 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
+    
     
     
     function AddDriversToDriverStore {
@@ -751,12 +759,22 @@ if ($readerOperationSuccessful) {
 
         # Step 3: Mount the WIM
         SetStatusText -message 'Mounting WIM image...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-        Write-Host 'Mounting WIM image...'
+        Write-Host "Debug: Mounting WIM image with ImageFile: $ImageFile and MountDir: $MountDir"
+
+        # Validate ImageFile before calling MountWimImage
+        if ($ImageFile -isnot [string]) {
+            Write-Error "Error: ImageFile is not a valid string. Value: $ImageFile"
+            SetStatusText -message 'Error: Invalid ImageFile path.' -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return $false
+        }
+
+        # Call MountWimImage
         if (-not (MountWimImage -WimFile $ImageFile -MountDir $MountDir)) {
             SetStatusText -message 'Error mounting WIM image.' -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
             Write-Error 'Error mounting WIM image.'
             return $false
         }
+
   
         # Step 4: Add Drivers
         SetStatusText -message 'Adding drivers to WIM...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
