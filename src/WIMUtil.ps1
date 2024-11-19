@@ -543,58 +543,59 @@ if ($readerOperationSuccessful) {
 
     function ConvertEsdToWim {
         param (
-            [string]$ImageFile  # Path to the image file (WIM or ESD)
+            [string]$ImageFile
         )
-        
         if ($ImageFile -like "*.esd") {
             $convertedWimFile = [System.IO.Path]::ChangeExtension($ImageFile, ".wim")
             SetStatusText -message "Detected .esd file. Converting to .wim: $convertedWimFile" -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
             [System.Windows.Forms.Application]::DoEvents()
-        
+    
             try {
                 $quotedImageFile = QuotePath $ImageFile
                 $quotedConvertedWimFile = QuotePath $convertedWimFile
-                Start-Process -FilePath "dism" -ArgumentList "/export-image /sourceimagefile:$quotedImageFile /sourceindex:1 /destinationimagefile:$quotedConvertedWimFile /compress:max /checkintegrity" -NoNewWindow -Wait
-                SetStatusText -message "Conversion to .wim completed successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-                [System.Windows.Forms.Application]::DoEvents()
-        
-                # Delete the original ESD file if it exists
-                if (Test-Path -Path $ImageFile) {
-                    Write-Host "Deleting original .esd file: $ImageFile..."
-                    Remove-Item -Path $ImageFile -Force
-                    Write-Host "Original .esd file deleted successfully."
-                    SetStatusText -message "Original .esd file deleted successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-                }
-        
+                Write-Host "Validating ESD file integrity..."
+                Start-Process -FilePath "dism" -ArgumentList "/CheckIntegrity /SourceImageFile:$quotedImageFile" -NoNewWindow -Wait
+                Write-Host "Converting ESD to WIM..."
+                Start-Process -FilePath "dism" -ArgumentList "/export-image /sourceimagefile:$quotedImageFile /sourceindex:1 /destinationimagefile:$quotedConvertedWimFile /compress:recovery" -NoNewWindow -Wait
+                Write-Host "Conversion completed."
+    
+                Remove-Item -Path $ImageFile -Force
+                Write-Host "Original .esd file deleted successfully."
                 return $convertedWimFile
             }
             catch {
-                SetStatusText -message "Error converting .esd to .wim: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-                Write-Host "Error: $_"
+                Write-Host "Error during ESD-to-WIM conversion: $_"
                 return $null
             }
         }
         else {
             return $ImageFile
         }
-    }
+    }    
     
     function MountWimImage {
         param (
-            [string]$WimFile, # Path to the WIM file
-            [string]$MountDir   # Path to the mount directory
+            [string]$WimFile,
+            [string]$MountDir
         )
-        
-        # Ensure the mount directory exists
         if (!(Test-Path -Path $MountDir)) {
-            try {
-                New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
-            }
-            catch {
-                Write-Host "Error: Unable to create mount directory: $MountDir. $_" -ForegroundColor Red
-                return $false
-            }
+            New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
         }
+    
+        try {
+            $quotedWimFile = QuotePath $WimFile
+            $quotedMountDir = QuotePath $MountDir
+            Write-Host "Mounting WIM file..."
+            Start-Process -FilePath "dism" -ArgumentList "/mount-wim /wimfile:$quotedWimFile /index:1 /mountdir:$quotedMountDir" -NoNewWindow -Wait
+            Write-Host "WIM mounted successfully."
+            return $true
+        }
+        catch {
+            Write-Host "Error during WIM mounting: $_"
+            return $false
+        }
+    }
+    
         
         try {
             $quotedWimFile = QuotePath $WimFile
