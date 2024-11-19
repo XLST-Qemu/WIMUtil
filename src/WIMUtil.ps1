@@ -621,16 +621,28 @@ if ($readerOperationSuccessful) {
             return $false
         }
     
+        # Verify that the WIM file exists
+        if (!(Test-Path -Path $WimFile)) {
+            Write-Error "Error: WIM file not found at $WimFile"
+            SetStatusText -message "WIM file not found at $WimFile" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            return $false
+        }
+    
+        # Ensure the mount directory exists
         if (!(Test-Path -Path $MountDir)) {
             New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
         }
     
         try {
+            # Properly quote paths
             $quotedWimFile = QuotePath -Path $WimFile
             $quotedMountDir = QuotePath -Path $MountDir
     
-            Write-Host "Mounting WIM file..."
+            # Log the DISM command
+            Write-Host "DISM Command: dism /mount-wim /wimfile:$quotedWimFile /index:1 /mountdir:$quotedMountDir"
             SetStatusText -message "Mounting WIM file..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+    
+            # Execute the DISM command
             Start-Process -FilePath 'dism' -ArgumentList "/mount-wim /wimfile:$quotedWimFile /index:1 /mountdir:$quotedMountDir" -NoNewWindow -Wait
     
             Write-Host "WIM mounted successfully."
@@ -643,6 +655,7 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
+    
     
     function AddDriversToDriverStore {
         param (
@@ -737,10 +750,6 @@ if ($readerOperationSuccessful) {
         }
 
         # Step 3: Mount the WIM
-        if (!(Test-Path -Path $MountDir)) {
-            New-Item -ItemType Directory -Path $MountDir -Force | Out-Null
-        }
-    
         SetStatusText -message 'Mounting WIM image...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
         Write-Host 'Mounting WIM image...'
         if (-not (MountWimImage -WimFile $ImageFile -MountDir $MountDir)) {
@@ -748,7 +757,7 @@ if ($readerOperationSuccessful) {
             Write-Error 'Error mounting WIM image.'
             return $false
         }
-    
+  
         # Step 4: Add Drivers
         SetStatusText -message 'Adding drivers to WIM...' -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
         Write-Host 'Adding drivers to WIM...'
