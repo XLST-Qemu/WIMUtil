@@ -170,7 +170,10 @@ if ($readerOperationSuccessful) {
     $SelectISOLocationButton = $window.FindName("SelectISOLocationButton")
     $CreateISOTextBox = $window.FindName("CreateISOTextBox")
 
-
+    function RefreshGUI {
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+    
     function ShowScreen {
         Write-Host "Current Screen Index: $script:currentScreenIndex"  # Debugging line
     
@@ -276,10 +279,6 @@ if ($readerOperationSuccessful) {
     }
     
     # Helper Functions
-    function RefreshGUI {
-        [System.Windows.Forms.Application]::DoEvents()
-    }
-
     function QuotePath {
         param (
             [string]$Path
