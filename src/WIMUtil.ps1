@@ -586,8 +586,8 @@ if ($readerOperationSuccessful) {
             return $false
         }
     
-        # Construct the DriversDir path
-        $DriversDir = Join-Path -Path $Script:WorkingDirectory -ChildPath "Sources\$OEM$\$1\Drivers"
+        # Construct the DriversDir path with literal $OEM$ and $1
+        $DriversDir = Join-Path -Path $Script:WorkingDirectory -ChildPath 'Sources\$OEM$\$1\Drivers'
     
         try {
             # Ensure the target directory exists, create it if necessary
@@ -624,6 +624,7 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
+    
     
     
     
