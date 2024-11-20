@@ -1003,29 +1003,49 @@ if ($readerOperationSuccessful) {
         $Script:ISOPath = SelectLocation -Mode "Save" -Title "Save the new ISO file" -Filter "ISO Files (*.iso)|*.iso"
     
         if ($Script:ISOPath) {
-            # Get the drive or partition of the selected ISO path
-            $drive = Get-PSDrive -Name (Split-Path -Qualifier $Script:ISOPath)
+            # Extract the drive letter from the ISO path
+            $driveLetter = (Split-Path -Qualifier $Script:ISOPath).TrimEnd(":")
     
-            # Check if there's sufficient space available
-            if ($drive.Free -ge $requiredSpace) {
-                # Update the TextBox with the selected save location
-                $CreateISOTextBox.Text = $Script:ISOPath
-                $CreateISOButton.IsEnabled = $true
-            } else {
-                # Reset the ISO path and show an error message
+            try {
+                # Validate that the drive exists
+                $drive = Get-PSDrive -Name $driveLetter
+                if (-not $drive) {
+                    throw "Drive not found for the selected ISO save location."
+                }
+    
+                # Check if there's sufficient space available
+                if ($drive.Free -ge $requiredSpace) {
+                    # Update the TextBox with the selected save location
+                    $CreateISOTextBox.Text = $Script:ISOPath
+                    $CreateISOButton.IsEnabled = $true
+                } else {
+                    # Reset the ISO path and show an error message
+                    $Script:ISOPath = $null
+                    $CreateISOTextBox.Text = "Insufficient space. Please select a location with at least $([math]::Round($requiredSpace / 1GB, 2)) GB free space."
+    
+                    # Display a popup message
+                    [System.Windows.MessageBox]::Show(
+                        "The selected drive/partition does not have enough space. Please select a different location.", 
+                        "Insufficient Space", 
+                        [System.Windows.MessageBoxButton]::OK, 
+                        [System.Windows.MessageBoxImage]::Error
+                    )
+                }
+            }
+            catch {
+                # Handle cases where the drive cannot be found
                 $Script:ISOPath = $null
-                $CreateISOTextBox.Text = "Insufficient space. Please select a location with at least $([math]::Round($requiredSpace / 1GB, 2)) GB free space."
-                
-                # Display a popup message
                 [System.Windows.MessageBox]::Show(
-                    "The selected drive/partition does not have enough space. Please select a different location.", 
-                    "Insufficient Space", 
+                    "Could not determine the selected drive. Please select a valid location.", 
+                    "Drive Error", 
                     [System.Windows.MessageBoxButton]::OK, 
                     [System.Windows.MessageBoxImage]::Error
                 )
+                Write-Error "Error: $_"
             }
         }
     }
+    
     
     # Updated CreateISO function
     function CreateISO {
