@@ -266,11 +266,6 @@ if ($readerOperationSuccessful) {
             }
         }
     }
-    
-    
-        # Close the application
-        $window.Close()
-    }
   
 
     # Helper Functions
