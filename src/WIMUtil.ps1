@@ -375,7 +375,9 @@ if ($readerOperationSuccessful) {
                 }
     
                 # Update the TextBox with the actual working directory path
+                SetStatusText -message "Working directory created. Click Start to continue." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 $WorkingDirectoryTextBox.Text = "Working directory created: $Script:WorkingDirectory"
+                RefreshGUI
             }
             else {
                 $Script:WorkingDirectory = $null
@@ -396,7 +398,9 @@ if ($readerOperationSuccessful) {
         $Script:SelectedISO = SelectLocation -Mode "File" -Title "Select an ISO file" -Filter "ISO Files (*.iso)|*.iso"
         if ($Script:SelectedISO) {
             Write-Host "Selected ISO: $Script:SelectedISO"
+            SetStatusText -message "Windows ISO file selected. Select a working directory next." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
             $ISOPathTextBox.Text = "Windows ISO file selected at $Script:SelectedISO"
+            RefreshGUI
         }
         UpdateStartISOExtractionButtonState
     }
@@ -449,7 +453,7 @@ if ($readerOperationSuccessful) {
                 $driveLetter = ($mountResult | Get-Volume).DriveLetter + ":"
     
                 # Copy files from the mounted ISO to the working directory
-                SetStatusText -message "Copying files from ISO, please wait..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
+                SetStatusText -message "Copying files from ISO. This might take a while, please wait..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 RefreshGUI
                 Copy-Item -Path "$driveLetter\*" -Destination $Script:WorkingDirectory -Recurse -Force
     
@@ -466,7 +470,7 @@ if ($readerOperationSuccessful) {
                 }
     
                 # Dismount the ISO
-                SetStatusText -message "Dismounting ISO..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
+                SetStatusText -message "Dismounting ISO, please wait..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 RefreshGUI
                 Dismount-DiskImage -ImagePath $Script:SelectedISO
     
