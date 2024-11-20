@@ -173,7 +173,7 @@ if ($readerOperationSuccessful) {
     function RefreshGUI {
         [System.Windows.Forms.Application]::DoEvents()
     }
-    
+
     function ShowScreen {
         Write-Host "Current Screen Index: $script:currentScreenIndex"  # Debugging line
     
@@ -449,7 +449,7 @@ if ($readerOperationSuccessful) {
                 $driveLetter = ($mountResult | Get-Volume).DriveLetter + ":"
     
                 # Copy files from the mounted ISO to the working directory
-                SetStatusText -message "Copying files from mounted ISO ($driveLetter) to $Script:WorkingDirectory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
+                SetStatusText -message "Copying files from ISO, please wait..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
                 RefreshGUI
                 Copy-Item -Path "$driveLetter\*" -Destination $Script:WorkingDirectory -Recurse -Force
     
@@ -511,7 +511,7 @@ if ($readerOperationSuccessful) {
     
         try {
             (New-Object System.Net.WebClient).DownloadFile($url, $destination)
-            SetStatusText -message "Latest UnattendedWinstall XML file added successfully." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
+            SetStatusText -message "Latest UnattendedWinstall XML file added. Click Next to Continue." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
     
             # Update the DownloadUWTextBox content with the success message
             $DownloadUWTextBox.Text = "Answer file added to: $destination"
@@ -550,7 +550,7 @@ if ($readerOperationSuccessful) {
             try {
                 # Copy the selected file to the destination
                 Copy-Item -Path $selectedFile -Destination $destination -Force
-                SetStatusText -message "Selected XML file added successfully." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
+                SetStatusText -message "Selected XML file added successfully. Click Next to Continue." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
     
                 # Update the ManualXMLPathTextBox with the success message
                 $ManualXMLPathTextBox.Text = "Answer file added to: $destination"
@@ -644,7 +644,7 @@ if ($readerOperationSuccessful) {
             Start-Process -FilePath 'dism' -ArgumentList $dismCommand -NoNewWindow -Wait
     
             # Notify the user about successful completion
-            SetStatusText -message "Drivers exported successfully to $DriversDir." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
+            SetStatusText -message "Drivers exported successfully. Click Next to Continue." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Drivers exported successfully to $DriversDir."
             return $true
         }
@@ -947,7 +947,7 @@ if ($readerOperationSuccessful) {
         $oscdimgPath = "C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe"
 
         if (Test-Path -Path $oscdimgPath) {
-            SetStatusText -message "oscdimg is present on the system." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+            SetStatusText -message "oscdimg detected. Select a save location to Continue." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
             $GetoscdimgButton.IsEnabled = $false
             $CreateISOButton.IsEnabled = $true
         }
@@ -994,7 +994,7 @@ if ($readerOperationSuccessful) {
             }
 
             # File is valid, enable the Create ISO button
-            SetStatusText -message "oscdimg verified and ready for use." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+            SetStatusText -message "oscdimg verified. Select a save location to Continue." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
             $GetoscdimgButton.IsEnabled = $false
             $CreateISOButton.IsEnabled = $true
         }
@@ -1038,7 +1038,8 @@ if ($readerOperationSuccessful) {
                 # Check if there's sufficient space available
                 if ($drive.Free -ge $requiredSpace) {
                     # Update the TextBox with the selected save location
-                    $CreateISOTextBox.Text = $Script:ISOPath
+                    SetStatusText -message "Location Selected. Click Create ISO to continue." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+                    $CreateISOTextBox.Text = "Location selected at $Script:ISOPath"
                     $CreateISOButton.IsEnabled = $true
                 }
                 else {
@@ -1083,7 +1084,7 @@ if ($readerOperationSuccessful) {
             return
         }
     
-        SetStatusText -message "Creating ISO file..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+        SetStatusText -message "Creating ISO file. This might take a while, please wait..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
         RefreshGUI
     
         # Define paths dynamically
@@ -1112,15 +1113,13 @@ if ($readerOperationSuccessful) {
         try {
             # Use Start-Process to run oscdimg with the correct arguments for dual boot support
             Start-Process -FilePath $oscdimgPath -ArgumentList $arguments -NoNewWindow -Wait
-            SetStatusText -message "ISO file successfully saved at $Script:ISOPath." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+            SetStatusText -message "Done! ISO file successfully saved at $Script:ISOPath." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
         }
         catch {
             # Handle errors during the process
             SetStatusText -message "Failed to create ISO: $($_.Exception.Message)" -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
         }
     }
-    
-    
 
     # Attach Event Handlers after functions are defined
     $window.Add_MouseLeftButtonDown({ Window_MouseLeftButtonDown $args[0] $args[1] })
