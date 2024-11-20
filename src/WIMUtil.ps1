@@ -221,13 +221,11 @@ if ($readerOperationSuccessful) {
 
     # Close button function
     function CleanupAndExit {
-        # Check if the working directory or drivers folder exists
-        $DriversDir = Join-Path -Path (Split-Path -Parent $Script:WorkingDirectory) -ChildPath "Drivers"
+        # Check if the working directory folder exists
         $workingDirExists = $Script:WorkingDirectory -and (Test-Path -Path $Script:WorkingDirectory)
-        $driversDirExists = Test-Path -Path $DriversDir
     
-        # If neither directory exists, skip the cleanup prompt
-        if (-not $workingDirExists -and -not $driversDirExists) {
+        # If directory doesn't exist, skip the cleanup prompt
+        if (-not $workingDirExists) {
             Write-Host "No directories to clean up. Exiting without cleanup prompt."
             $window.Close()
             return
@@ -235,7 +233,7 @@ if ($readerOperationSuccessful) {
     
         # Show a confirmation popup to ask for cleanup
         $result = [System.Windows.MessageBox]::Show(
-            "Do you want to clean up the working directory to free up space? (Drivers folder will not be deleted; please remove manually if needed.)", 
+            "Do you want to clean up the working directory to free up space?", 
             "Cleanup Confirmation", 
             [System.Windows.MessageBoxButton]::YesNo, 
             [System.Windows.MessageBoxImage]::Question
@@ -589,18 +587,14 @@ if ($readerOperationSuccessful) {
         }
     
         # Construct the DriversDir path
-        $DriversDir = Join-Path -Path $Script:WorkingDirectory -ChildPath 'WIMUtil\Sources\$OEM$\$1\Drivers'
-    
-        # Escape the $ symbols for literal interpretation
-        $DriversDir = $DriversDir -replace '\$', '`$'
+        $DriversDir = Join-Path -Path $Script:WorkingDirectory -ChildPath "Sources\$OEM$\$1\Drivers"
     
         try {
             # Ensure the target directory exists, create it if necessary
             if (-not (Test-Path -Path $DriversDir)) {
                 Write-Host "Directory does not exist. Creating directory: $DriversDir"
                 New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
-            }
-            else {
+            } else {
                 Write-Host "Directory already exists: $DriversDir"
             }
     
@@ -630,6 +624,7 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
+    
     
     
     # Working on this later
