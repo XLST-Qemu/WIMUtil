@@ -1118,10 +1118,12 @@ if ($readerOperationSuccessful) {
             # Use Start-Process to run oscdimg with the correct arguments for dual boot support
             Start-Process -FilePath $oscdimgPath -ArgumentList $arguments -NoNewWindow -Wait
             SetStatusText -message "Done! ISO file successfully saved at $Script:ISOPath." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
+            RefreshGUI
         }
         catch {
             # Handle errors during the process
             SetStatusText -message "Failed to create ISO: $($_.Exception.Message)" -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
+            RefreshGUI
         }
     }
 
