@@ -582,13 +582,9 @@ if ($readerOperationSuccessful) {
     }
     
     function ExportDrivers {
-        param (
-            [string]$Script:WorkingDirectory
-        )
-    
-        # Validate input
+        # Validate that $Script:WorkingDirectory is set
         if (-not $Script:WorkingDirectory) {
-            Write-Error "Error: WorkingDirectory is not specified. Please provide a valid working directory."
+            Write-Error "Error: WorkingDirectory is not set. Please select a working directory first."
             return $false
         }
     
@@ -633,7 +629,8 @@ if ($readerOperationSuccessful) {
             Write-Error $errorMessage
             return $false
         }
-    }  
+    }
+    
     
     # Working on this later
     function MountWimImage {
