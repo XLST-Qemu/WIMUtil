@@ -223,11 +223,16 @@ if ($readerOperationSuccessful) {
     function CleanupAndExit {
         # Check if the working directory folder exists
         $workingDirExists = $Script:WorkingDirectory -and (Test-Path -Path $Script:WorkingDirectory)
-    
-        # If directory doesn't exist, skip the cleanup prompt
+        
+        # If the directory doesn't exist, skip the cleanup prompt
         if (-not $workingDirExists) {
             Write-Host "No directories to clean up. Exiting without cleanup prompt."
-            $window.Close()
+            try {
+                $window.Close()  # Close the window if it exists
+            }
+            catch {
+                Write-Host "Unable to close the application window: $_"
+            }
             return
         }
     
@@ -245,27 +250,45 @@ if ($readerOperationSuccessful) {
                 # If the user chooses "Yes," attempt to delete the working directory
                 if ($workingDirExists) {
                     try {
-                        Remove-Item -Path $Script:WorkingDirectory -Recurse -Force
+                        Write-Host "Attempting to delete the working directory: $Script:WorkingDirectory"
+                        Remove-Item -Path $Script:WorkingDirectory -Recurse -Force -ErrorAction Stop
                         Write-Host "Working directory cleaned up successfully."
                     }
                     catch {
                         Write-Host "Failed to clean up the working directory: $_"
+                        [System.Windows.MessageBox]::Show(
+                            "Failed to delete the working directory. Error: $($_.Exception.Message)", 
+                            "Cleanup Error", 
+                            [System.Windows.MessageBoxButton]::OK, 
+                            [System.Windows.MessageBoxImage]::Error
+                        )
                     }
                 }
                 # Close the application after cleanup
-                $window.Close()
+                try {
+                    $window.Close()  # Close the application window
+                }
+                catch {
+                    Write-Host "Unable to close the application window: $_"
+                }
             }
             [System.Windows.MessageBoxResult]::No {
                 # If the user chooses "No," exit without cleanup
                 Write-Host "User chose not to clean up. Exiting without cleanup."
-                $window.Close()
+                try {
+                    $window.Close()  # Close the application window
+                }
+                catch {
+                    Write-Host "Unable to close the application window: $_"
+                }
             }
             [System.Windows.MessageBoxResult]::Cancel {
                 # If the user chooses "Cancel," do nothing and allow them to continue
                 Write-Host "User canceled the cleanup process. Returning to the application."
             }
         }
-    }   
+    }
+       
 
     # Helper Functions
     function QuotePath {
