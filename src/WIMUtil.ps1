@@ -587,13 +587,13 @@ if ($readerOperationSuccessful) {
         )
     
         # Validate input
-        if (-not $WorkingDirectory) {
+        if (-not $Script:WorkingDirectory) {
             Write-Error "Error: WorkingDirectory is not specified. Please provide a valid working directory."
             return $false
         }
     
         # Construct the DriversDir path
-        $DriversDir = Join-Path -Path $WorkingDirectory -ChildPath 'WIMUtil\Sources\$OEM$\$1\Drivers'
+        $DriversDir = Join-Path -Path $Script:WorkingDirectory -ChildPath 'WIMUtil\Sources\$OEM$\$1\Drivers'
     
         # Escape the $ symbols for literal interpretation
         $DriversDir = $DriversDir -replace '\$', '`$'
