@@ -213,84 +213,73 @@ if ($readerOperationSuccessful) {
                 CheckOscdimg
             }
         }
-    
-        [System.Windows.Forms.Application]::DoEvents() 
+
+        RefreshGUI 
     }
     
     ShowScreen    
 
     # Close button function
     function CleanupAndExit {
-        # Check if the working directory folder exists
+        # Check if the working directory exists
         $workingDirExists = $Script:WorkingDirectory -and (Test-Path -Path $Script:WorkingDirectory)
-        
+    
         # If the directory doesn't exist, skip the cleanup prompt
         if (-not $workingDirExists) {
             Write-Host "No directories to clean up. Exiting without cleanup prompt."
-            try {
-                $window.Close()  # Close the window if it exists
-            }
-            catch {
-                Write-Host "Unable to close the application window: $_"
-            }
+            $window.Close()  # Close the window
             return
         }
     
-        # Show a confirmation popup to ask for cleanup with Yes, No, and Cancel options
+        # Show a confirmation popup with Yes, No, and Cancel options
         $result = [System.Windows.MessageBox]::Show(
-            "Do you want to clean up the working directory to free up space? Selecting 'Yes' will delete the working directory. Selecting 'No' will exit without cleanup. Selecting 'Cancel' will allow you to return to the application.", 
+            "Do you want to clean up the working directory to free up space? 
+            - Selecting 'Yes' will delete the working directory. 
+            - Selecting 'No' will exit without cleanup. 
+            - Selecting 'Cancel' will allow you to return to the application.", 
             "Cleanup Confirmation", 
             [System.Windows.MessageBoxButton]::YesNoCancel, 
             [System.Windows.MessageBoxImage]::Question
         )
     
         # Handle the user's response
-        switch ($result) {
-            [System.Windows.MessageBoxResult]::Yes {
-                # If the user chooses "Yes," attempt to delete the working directory
-                if ($workingDirExists) {
-                    try {
-                        Write-Host "Attempting to delete the working directory: $Script:WorkingDirectory"
-                        Remove-Item -Path $Script:WorkingDirectory -Recurse -Force -ErrorAction Stop
-                        Write-Host "Working directory cleaned up successfully."
-                    }
-                    catch {
-                        Write-Host "Failed to clean up the working directory: $_"
-                        [System.Windows.MessageBox]::Show(
-                            "Failed to delete the working directory. Error: $($_.Exception.Message)", 
-                            "Cleanup Error", 
-                            [System.Windows.MessageBoxButton]::OK, 
-                            [System.Windows.MessageBoxImage]::Error
-                        )
-                    }
-                }
-                # Close the application after cleanup
+        if ($result -eq [System.Windows.MessageBoxResult]::Yes) {
+            # Attempt to delete the working directory
+            if ($workingDirExists) {
                 try {
-                    $window.Close()  # Close the application window
+                    Write-Host "Attempting to delete the working directory: $Script:WorkingDirectory"
+                    Remove-Item -Path $Script:WorkingDirectory -Recurse -Force -ErrorAction Stop
+                    Write-Host "Working directory cleaned up successfully."
                 }
                 catch {
-                    Write-Host "Unable to close the application window: $_"
+                    Write-Host "Failed to clean up the working directory: $_"
+                    [System.Windows.MessageBox]::Show(
+                        "Failed to delete the working directory. Error: $($_.Exception.Message)", 
+                        "Cleanup Error", 
+                        [System.Windows.MessageBoxButton]::OK, 
+                        [System.Windows.MessageBoxImage]::Error
+                    )
                 }
             }
-            [System.Windows.MessageBoxResult]::No {
-                # If the user chooses "No," exit without cleanup
-                Write-Host "User chose not to clean up. Exiting without cleanup."
-                try {
-                    $window.Close()  # Close the application window
-                }
-                catch {
-                    Write-Host "Unable to close the application window: $_"
-                }
-            }
-            [System.Windows.MessageBoxResult]::Cancel {
-                # If the user chooses "Cancel," do nothing and allow them to continue
-                Write-Host "User canceled the cleanup process. Returning to the application."
-            }
+            # Close the application after cleanup
+            $window.Close()
+        }
+        elseif ($result -eq [System.Windows.MessageBoxResult]::No) {
+            # Close the application without cleanup
+            Write-Host "User chose not to clean up. Exiting without cleanup."
+            $window.Close()
+        }
+        elseif ($result -eq [System.Windows.MessageBoxResult]::Cancel) {
+            # Allow the user to continue the application
+            Write-Host "User canceled the cleanup process. Returning to the application."
         }
     }
-       
-
+    
     # Helper Functions
+    function RefreshGUI{
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+
     function QuotePath {
         param (
             [string]$Path
@@ -439,30 +428,30 @@ if ($readerOperationSuccessful) {
         $requiredSpace = 10GB
         if ($drive.Free -ge $requiredSpace) {
             SetStatusText -message "Sufficient space available. Preparing working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            RefreshGUI
     
             # Clear the working directory if it already exists
             if (Test-Path -Path $Script:WorkingDirectory) {
                 SetStatusText -message "Deleting existing working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
                 Remove-Item -Path $Script:WorkingDirectory -Recurse -Force
             }
     
             # Create a fresh working directory
             SetStatusText -message "Creating new working directory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            RefreshGUI
             New-Item -ItemType Directory -Path $Script:WorkingDirectory -Force | Out-Null
     
             try {
                 # Mount the ISO
                 SetStatusText -message "Mounting $Script:SelectedISO..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
                 $mountResult = Mount-DiskImage -ImagePath $Script:SelectedISO -PassThru
                 $driveLetter = ($mountResult | Get-Volume).DriveLetter + ":"
     
                 # Copy files from the mounted ISO to the working directory
                 SetStatusText -message "Copying files from mounted ISO ($driveLetter) to $Script:WorkingDirectory..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
                 Copy-Item -Path "$driveLetter\*" -Destination $Script:WorkingDirectory -Recurse -Force
     
                 # Remove autounattend.xml if it exists
@@ -479,25 +468,25 @@ if ($readerOperationSuccessful) {
     
                 # Dismount the ISO
                 SetStatusText -message "Dismounting ISO..." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
                 Dismount-DiskImage -ImagePath $Script:SelectedISO
     
                 # Mark extraction as completed
                 SetStatusText -message "Extraction completed. Click Next to Continue." -color $Script:SuccessColor -textBlock ([ref]$ExtractISOStatusText)
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
     
                 # Enable the Next Button now that extraction is complete
                 $NextButton.IsEnabled = $true
             }
             catch {
                 SetStatusText -message "Extraction failed: $_" -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
                 Dismount-DiskImage -ImagePath $Script:SelectedISO -ErrorAction SilentlyContinue
             }
         }
         else {
             SetStatusText -message "Not enough space on the selected drive for extraction." -color $Script:ErrorColor -textBlock ([ref]$ExtractISOStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            RefreshGUI
         }
     }
     
@@ -516,7 +505,7 @@ if ($readerOperationSuccessful) {
     # Download UnattendedWinstall XML File function
     function DownloadUWXML {
         SetStatusText -message "Downloading the latest UnattendedWinstall XML file..." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     
         $url = "https://github.com/memstechtips/UnattendedWinstall/raw/main/autounattend.xml"
         $destination = Join-Path -Path $Script:WorkingDirectory -ChildPath "autounattend.xml"
@@ -531,7 +520,7 @@ if ($readerOperationSuccessful) {
         catch {
             SetStatusText -message "Failed to download the file: $_" -color $Script:ErrorColor -textBlock ([ref]$AddXMLStatusText)
         }
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     }
     
 
@@ -539,7 +528,7 @@ if ($readerOperationSuccessful) {
     # SelectXMLFile function
     function SelectXMLFile {
         SetStatusText -message "Please select an XML file..." -color $Script:SuccessColor -textBlock ([ref]$AddXMLStatusText)
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     
         # Use the SelectLocation function for file selection
         $selectedFile = SelectLocation -Mode "File" -Title "Select an XML file" -Filter "XML Files (*.xml)|*.xml"
@@ -571,7 +560,7 @@ if ($readerOperationSuccessful) {
                 SetStatusText -message "Failed to add the selected file: $_" -color $Script:ErrorColor -textBlock ([ref]$AddXMLStatusText)
             }
         }
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     }
     
     
@@ -892,7 +881,7 @@ if ($readerOperationSuccessful) {
     # Working on this later
     function AddRecommendedDrivers {
         SetStatusText -message "Checking for driver directory..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     
         # Define driver directory with escaped $ symbols
         $winpeDriverDir = "C:\WIMUtil\`$WinpeDriver`$"
@@ -902,7 +891,7 @@ if ($readerOperationSuccessful) {
             New-Item -ItemType Directory -Path $winpeDriverDir | Out-Null
             SetStatusText -message "Created driver directory: $winpeDriverDir" -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             SetStatusText -message "Essential storage and network drivers added successfully." -color $Script:NeutralColor -textBlock ([ref]$AddRecDriversTextBox)
-            [System.Windows.Forms.Application]::DoEvents()
+            RefreshGUI
         }
     
         # Placeholder URLs for downloading drivers
@@ -919,23 +908,23 @@ if ($readerOperationSuccessful) {
                 $destinationPath = Join-Path -Path $winpeDriverDir -ChildPath $fileName  
                 SetStatusText -message "Downloading $fileName..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
 
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
     
                 (New-Object System.Net.WebClient).DownloadFile($url, $destinationPath)
                 SetStatusText -message "$fileName downloaded successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
 
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
             }
             catch {
                 SetStatusText -message "Error downloading ${fileName}: $($_)" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
 
-                [System.Windows.Forms.Application]::DoEvents()
+                RefreshGUI
             }
         }
     
         SetStatusText -message "All recommended drivers added successfully." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
 
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     }
 
     # Function to get the SHA-256 hash of a file
@@ -969,13 +958,13 @@ if ($readerOperationSuccessful) {
             $CreateISOButton.IsEnabled = $false
         }
 
-        [System.Windows.Forms.Application]::DoEvents()  # Refresh the UI
+        RefreshGUI  # Refresh the UI
     }
 
     # Function to download and validate oscdimg
     function DownloadOscdimg {
         SetStatusText -message "Preparing to download oscdimg..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
 
         $adkOscdimgPath = "C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg"
         $oscdimgFullPath = Join-Path -Path $adkOscdimgPath -ChildPath "oscdimg.exe"
@@ -984,13 +973,13 @@ if ($readerOperationSuccessful) {
         if (!(Test-Path -Path $adkOscdimgPath)) {
             New-Item -ItemType Directory -Path $adkOscdimgPath -Force | Out-Null
             SetStatusText -message "Created directory for oscdimg at: $adkOscdimgPath" -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            RefreshGUI
         }
 
         # Download oscdimg to the ADK path
         try {
             SetStatusText -message "Downloading oscdimg from: $oscdimgURL" -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-            [System.Windows.Forms.Application]::DoEvents()
+            RefreshGUI
 
         (New-Object System.Net.WebClient).DownloadFile($oscdimgURL, $oscdimgFullPath)
             Write-Host "oscdimg downloaded successfully from: $oscdimgURL"
@@ -1014,7 +1003,7 @@ if ($readerOperationSuccessful) {
             SetStatusText -message "Failed to download oscdimg: $($_.Exception.Message)" -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
         }
 
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     }
  
     function SelectNewISOLocation {
@@ -1096,7 +1085,7 @@ if ($readerOperationSuccessful) {
         }
     
         SetStatusText -message "Creating ISO file..." -color $Script:SuccessColor -textBlock ([ref]$CreateISOStatusText)
-        [System.Windows.Forms.Application]::DoEvents()
+        RefreshGUI
     
         # Define paths dynamically
         $sourceDir = "$Script:WorkingDirectory"
