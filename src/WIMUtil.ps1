@@ -583,35 +583,58 @@ if ($readerOperationSuccessful) {
     
     function ExportDrivers {
         param (
-            [string]$DriversDir = Join-Path -Path (Split-Path -Parent $Script:WorkingDirectory) -ChildPath 'WIMUtil\Sources\$OEM$\$1\Drivers'
+            [string]$Script:WorkingDirectory
         )
     
-        # Ensure the target directory exists
-        if (!(Test-Path -Path $DriversDir)) {
-            New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
+        # Validate input
+        if (-not $WorkingDirectory) {
+            Write-Error "Error: WorkingDirectory is not specified. Please provide a valid working directory."
+            return $false
         }
     
-        SetStatusText -message "Exporting drivers to $DriversDir..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-        Write-Host "Exporting drivers to $DriversDir..."
+        # Construct the DriversDir path
+        $DriversDir = Join-Path -Path $WorkingDirectory -ChildPath 'WIMUtil\Sources\$OEM$\$1\Drivers'
+    
+        # Escape the $ symbols for literal interpretation
+        $DriversDir = $DriversDir -replace '\$', '`$'
     
         try {
-            # Quote the directory path to handle spaces
-            $quotedDriversDir = QuotePath -Path $DriversDir
+            # Ensure the target directory exists, create it if necessary
+            if (-not (Test-Path -Path $DriversDir)) {
+                Write-Host "Directory does not exist. Creating directory: $DriversDir"
+                New-Item -ItemType Directory -Path $DriversDir -Force | Out-Null
+            }
+            else {
+                Write-Host "Directory already exists: $DriversDir"
+            }
+    
+            # Notify the user about the export process
+            SetStatusText -message "Exporting drivers to $DriversDir..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Exporting drivers to $DriversDir..."
+    
+            # Quote the DriversDir path to handle spaces
+            $quotedDriversDir = "`"$DriversDir`""
     
             # Execute the DISM command to export drivers
-            Start-Process -FilePath 'dism' -ArgumentList "/online /export-driver /destination:$quotedDriversDir" -NoNewWindow -Wait
+            $dismCommand = "/online /export-driver /destination:$quotedDriversDir"
+            Write-Host "Executing DISM command: dism $dismCommand"
     
+            Start-Process -FilePath 'dism' -ArgumentList $dismCommand -NoNewWindow -Wait
+    
+            # Notify the user about successful completion
             SetStatusText -message "Drivers exported successfully to $DriversDir." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
             Write-Host "Drivers exported successfully to $DriversDir."
             return $true
         }
         catch {
-            SetStatusText -message "Error exporting drivers: $_" -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Error "Error exporting drivers: $_"
+            # Handle any errors during the process
+            $errorMessage = "Error exporting drivers: $($_.Exception.Message)"
+            SetStatusText -message $errorMessage -color $Script:ErrorColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Error $errorMessage
             return $false
         }
-    }
-  
+    }  
+    
     # Working on this later
     function MountWimImage {
         param (
