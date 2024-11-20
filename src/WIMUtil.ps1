@@ -534,7 +534,7 @@ if ($readerOperationSuccessful) {
     }
     
     
-
+    # Working on this later
     function ConvertEsdToWim {
         param (
             [string]$ImageFile
@@ -581,11 +581,9 @@ if ($readerOperationSuccessful) {
         return $ImageFile
     }
     
-    
-
     function ExportDrivers {
         param (
-            [string]$DriversDir # Path to the directory where drivers will be exported
+            [string]$DriversDir = Join-Path -Path (Split-Path -Parent $Script:WorkingDirectory) -ChildPath 'WIMUtil\Sources\$OEM$\$1\Drivers'
         )
     
         # Ensure the target directory exists
@@ -614,6 +612,7 @@ if ($readerOperationSuccessful) {
         }
     }
   
+    # Working on this later
     function MountWimImage {
         param (
             [string]$WimFile,
@@ -667,9 +666,8 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
-    
-    
-    
+
+    # Working on this later
     function AddDriversToDriverStore {
         param (
             [string]$DriverPath,
@@ -696,7 +694,7 @@ if ($readerOperationSuccessful) {
         }
     }
     
-    
+    # Working on this later
     function CommitAndUnmountWim {
         param (
             [string]$MountDir
@@ -727,9 +725,9 @@ if ($readerOperationSuccessful) {
         }
     }
     
+    # Working on this later
     function AddDriversToImage {
         param (
-            [string]$WorkingDirectory = $Script:WorkingDirectory,
             [string]$ImageFile = (Join-Path -Path $Script:WorkingDirectory -ChildPath 'sources\install.esd'),
             [string]$MountParentDir = (Split-Path -Parent $Script:WorkingDirectory)
         )
@@ -742,7 +740,6 @@ if ($readerOperationSuccessful) {
         }
     
         # Define paths
-        $DriversDir = Join-Path -Path (Split-Path -Parent $WorkingDirectory) -ChildPath 'Drivers'
         $MountDir = Join-Path -Path $MountParentDir -ChildPath 'WIMMount'
         $WimDestination = Join-Path -Path $WorkingDirectory -ChildPath 'sources\install.wim'
     
@@ -835,7 +832,7 @@ if ($readerOperationSuccessful) {
     }
     
     
-    
+    # Working on this later
     function AddRecommendedDrivers {
         SetStatusText -message "Checking for driver directory..." -color $Script:SuccessColor -textBlock ([ref]$AddDriversStatusText)
         [System.Windows.Forms.Application]::DoEvents()
@@ -1050,7 +1047,7 @@ if ($readerOperationSuccessful) {
     $CloseButton.Add_Click({ CleanupAndExit })
     $DownloadUWXMLButton.Add_Click({ DownloadUWXML })
     $SelectXMLFileButton.Add_Click({ SelectXMLFile })
-    $AddDriversToImageButton.Add_Click({ AddDriversToImage })
+    $AddDriversToImageButton.Add_Click({ ExportDrivers })
     $AddRecDriversButton.Add_Click({ AddRecommendedDrivers })
     $GetoscdimgButton.Add_Click({ DownloadOscdimg })
     $SelectISOLocationButton.Add_Click({ SelectNewISOLocation })
