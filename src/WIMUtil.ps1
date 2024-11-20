@@ -280,9 +280,9 @@ if ($readerOperationSuccessful) {
 
     function SelectLocation {
         param (
-            [string]$Mode = "Folder", # Accepts "Folder" or "File"
+            [string]$Mode = "Folder", # Accepts "Folder", "File", or "Save"
             [string]$Title = "Select a location",
-            [string]$Filter = "All Files (*.*)|*.*" # Applicable only for File mode
+            [string]$Filter = "All Files (*.*)|*.*" # Applicable only for File or Save modes
         )
     
         if ($Mode -eq "Folder") {
@@ -303,9 +303,19 @@ if ($readerOperationSuccessful) {
                 return $OpenFileDialog.FileName
             }
         }
+        elseif ($Mode -eq "Save") {
+            $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+            $SaveFileDialog.Title = $Title
+            $SaveFileDialog.Filter = $Filter
+    
+            if ($SaveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                return $SaveFileDialog.FileName
+            }
+        }
     
         return $null # User canceled
     }
+    
     
 
     function SelectWorkingDirectory {
@@ -599,8 +609,8 @@ if ($readerOperationSuccessful) {
             }
     
             # Notify the user about the export process
-            SetStatusText -message "Exporting drivers to $DriversDir..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
-            Write-Host "Exporting drivers to $DriversDir..."
+            SetStatusText -message "Exporting drivers, please wait..." -color $Script:NeutralColor -textBlock ([ref]$AddDriversStatusText)
+            Write-Host "Exporting drivers to $DriversDir, please wait..."
     
             # Quote the DriversDir path to handle spaces
             $quotedDriversDir = "`"$DriversDir`""
@@ -624,9 +634,6 @@ if ($readerOperationSuccessful) {
             return $false
         }
     }
-    
-    
-    
     
     # Working on this later
     function MountWimImage {
@@ -975,8 +982,7 @@ if ($readerOperationSuccessful) {
 
         [System.Windows.Forms.Application]::DoEvents()
     }
-
-    # Define the location selection function
+ 
     function SelectNewISOLocation {
         # Ensure the working directory is set and exists
         if (-not $Script:WorkingDirectory -or -not (Test-Path -Path $Script:WorkingDirectory)) {
@@ -994,7 +1000,7 @@ if ($readerOperationSuccessful) {
         $requiredSpace = $workingDirSize + 1GB
     
         # Prompt the user to select the save location for the new ISO file
-        $Script:ISOPath = SelectLocation -Mode "File" -Title "Save the new ISO file" -Filter "ISO Files (*.iso)|*.iso"
+        $Script:ISOPath = SelectLocation -Mode "Save" -Title "Save the new ISO file" -Filter "ISO Files (*.iso)|*.iso"
     
         if ($Script:ISOPath) {
             # Get the drive or partition of the selected ISO path
@@ -1005,8 +1011,7 @@ if ($readerOperationSuccessful) {
                 # Update the TextBox with the selected save location
                 $CreateISOTextBox.Text = $Script:ISOPath
                 $CreateISOButton.IsEnabled = $true
-            }
-            else {
+            } else {
                 # Reset the ISO path and show an error message
                 $Script:ISOPath = $null
                 $CreateISOTextBox.Text = "Insufficient space. Please select a location with at least $([math]::Round($requiredSpace / 1GB, 2)) GB free space."
@@ -1022,8 +1027,6 @@ if ($readerOperationSuccessful) {
         }
     }
     
-    
-
     # Updated CreateISO function
     function CreateISO {
         if (-not $Script:ISOPath) {
