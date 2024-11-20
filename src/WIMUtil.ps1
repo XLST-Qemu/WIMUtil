@@ -276,7 +276,7 @@ if ($readerOperationSuccessful) {
     }
     
     # Helper Functions
-    function RefreshGUI{
+    function RefreshGUI {
         [System.Windows.Forms.Application]::DoEvents()
     }
 
