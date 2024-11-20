@@ -265,8 +265,7 @@ if ($readerOperationSuccessful) {
                 Write-Host "User canceled the cleanup process. Returning to the application."
             }
         }
-    }
-  
+    }   
 
     # Helper Functions
     function QuotePath {
@@ -1109,6 +1108,7 @@ if ($readerOperationSuccessful) {
             SetStatusText -message "Failed to create ISO: $($_.Exception.Message)" -color $Script:ErrorColor -textBlock ([ref]$CreateISOStatusText)
         }
     }
+    
     
 
     # Attach Event Handlers after functions are defined
