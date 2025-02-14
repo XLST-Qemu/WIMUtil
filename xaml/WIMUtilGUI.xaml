@@ -1,0 +1,777 @@
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="ISO Editor Wizard"
+    Width="690"
+    Height="460"
+    Background="Transparent"
+    WindowStartupLocation="CenterScreen"
+    WindowStyle="None"
+    mc:Ignorable="d">
+    <!--  WindowChrome for rounded corners, without transparency  -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" CornerRadius="10" />
+    </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <!--  Updated Button Style for Primary Buttons  -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#FFDE00" />
+            <Setter Property="FontFamily" Value="Futura" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="15,15" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="2"
+                            CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!--  Hover State for Enabled Button  -->
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FFDE00" />
+                    <Setter Property="Foreground" Value="Black" />
+                    <Setter Property="BorderBrush" Value="#FFDE00" />
+                </Trigger>
+                <!--  Disabled State  -->
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="#D3D3D3" />
+                    <Setter Property="BorderBrush" Value="#FFEB99" />
+                    <Setter Property="Cursor" Value="Arrow" />
+                    <!--  Standard cursor for disabled button  -->
+                </Trigger>
+                <!--  Disabled Hover State  -->
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsEnabled" Value="False" />
+                        <Condition Property="IsMouseOver" Value="True" />
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="#A9A9A9" />
+                    <!--  Dark grey for disabled hover  -->
+                    <Setter Property="Foreground" Value="#C0C0C0" />
+                </MultiTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <!--  Outer Border for rounded corners and window appearance  -->
+    <Border
+        Padding="10"
+        Background="#202020"
+        CornerRadius="10">
+        <Grid Margin="-10,-10,-10,-10">
+            <!--  Title in Top-Left Corner  -->
+            <DockPanel
+                Margin="10,5,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top">
+                <!--  Icon  -->
+                <TextBlock
+                    Margin="0,-6,5,0"
+                    FontFamily="Segoe UI Emoji"
+                    FontSize="18"
+                    FontWeight="Light"
+                    Foreground="White"
+                    Text="&#x1F9F0;" />
+                <!--  Program Name  -->
+                <TextBlock
+                    FontFamily="Helvetica Neue"
+                    FontSize="18"
+                    FontWeight="Light"
+                    Foreground="White">
+                    <Run Text="WIMUtilºº»¯°æ" />
+                    <Run
+                        FontSize="12"
+                        FontStyle="Italic"
+                        Foreground="Gray"
+                        Text="by Memory &amp; XLST" />
+                </TextBlock>
+            </DockPanel>
+            <!--  Close Button in Top-Right Corner  -->
+            <DockPanel HorizontalAlignment="Right" VerticalAlignment="Top">
+                <Button
+                    x:Name="CloseButton"
+                    Width="28"
+                    Height="28"
+                    Background="Transparent"
+                    Content="&#xE10A;"
+                    FontFamily="Segoe MDL2 Assets"
+                    FontSize="12"
+                    FontWeight="ExtraLight"
+                    Foreground="White">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border
+                                x:Name="border"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="0,10,0,0">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <!--  Change background and border on hover  -->
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="Red" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="Red" />
+                                    <!--  Visible border on hover  -->
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="DarkRed" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </DockPanel>
+            <!--  1. Select ISO Screen Elements  -->
+            <StackPanel
+                x:Name="SelectISOScreen"
+                Width="640"
+                Height="360"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <DockPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <!--  Icon  -->
+                    <TextBlock
+                        Width="70"
+                        Height="70"
+                        Margin="0,0,10,0"
+                        DockPanel.Dock="Left"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="68"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        Text="&#xE958;" />
+                    <!--  StackPanel to hold Heading and StatusText  -->
+                    <StackPanel VerticalAlignment="Center">
+                        <!--  Heading Text  -->
+                        <TextBlock
+                            Height="35"
+                            VerticalAlignment="Top"
+                            FontFamily="Helvetica Neue"
+                            FontSize="32"
+                            FontWeight="Bold"
+                            Foreground="White"
+                            Text="Select Windows ISO" />
+                        <!--  Status Text, aligned at the bottom of the StackPanel  -->
+                        <TextBlock
+                            x:Name="ExtractISOStatusText"
+                            Height="22"
+                            Margin="0,5,0,0"
+                            VerticalAlignment="Bottom"
+                            FontFamily="Helvetica Neue"
+                            FontSize="14"
+                            Foreground="DarkGray"
+                            Text="No ISO File Selected" />
+                    </StackPanel>
+                </DockPanel>
+                <Border
+                    Margin="0,5,0,0"
+                    Background="#303030"
+                    CornerRadius="10">
+                    <DockPanel
+                        Width="640"
+                        Height="265"
+                        HorizontalAlignment="Left">
+                        <!--  Main StackPanel for arranging elements vertically  -->
+                        <StackPanel
+                            Width="590"
+                            Height="215"
+                            Margin="20,10,20,10"
+                            Orientation="Vertical">
+                            <!--  ISO Path TextBox and Select ISO Button  -->
+                            <DockPanel
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="ISOPathTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Select a Windows ISO file on your computer to get started." />
+                                <Button
+                                    x:Name="SelectISOButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Select ISO"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                            <!--  Select Working Directory TextBox and Button  -->
+                            <DockPanel
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="WorkingDirectoryTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Select a working directory to extract the ISO." />
+                                <Button
+                                    x:Name="SelectWorkingDirectoryButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Select Directory"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                            <!--  Start Button  -->
+                            <Button
+                                x:Name="StartISOExtractionButton"
+                                Width="125"
+                                Height="30"
+                                Margin="0,10,0,10"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="Start"
+                                FontWeight="Bold"
+                                IsEnabled="False"
+                                Style="{StaticResource PrimaryButtonStyle}" />
+                            <!--  Download Notice  -->
+                            <TextBlock
+                                Width="590"
+                                Margin="0,0,0,0"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                Text="If you don't have a Windows ISO, you can download one:" />
+                            <!--  Separator  -->
+                            <Border
+                                Width="550"
+                                Height="3"
+                                Margin="0,10,0,10"
+                                HorizontalAlignment="Left"
+                                Background="Gray" />
+                            <!--  Windows 10 and Windows 11 Buttons  -->
+                            <StackPanel
+                                Width="550"
+                                Margin="0,5,0,5"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                                <Button
+                                    x:Name="DownloadWin10Button"
+                                    Width="125"
+                                    Height="30"
+                                    Margin="140,0,10,0"
+                                    Content="Windows 10"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                                <Button
+                                    x:Name="DownloadWin11Button"
+                                    Width="125"
+                                    Height="30"
+                                    Margin="10,0,0,0"
+                                    Content="Windows 11"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+            <!--  2. Add XML Answer File Screen Elements  -->
+            <StackPanel
+                x:Name="AddXMLFileScreen"
+                Width="640"
+                Height="360"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Visibility="Collapsed">
+                <DockPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <!--  Icon  -->
+                    <TextBlock
+                        Width="70"
+                        Height="70"
+                        Margin="0,0,10,0"
+                        DockPanel.Dock="Left"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="68"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        Text="&#xE8E5;" />
+                    <!--  StackPanel for Heading and Status Text  -->
+                    <StackPanel VerticalAlignment="Center">
+                        <!--  Heading Text  -->
+                        <TextBlock
+                            Height="35"
+                            VerticalAlignment="Top"
+                            FontFamily="Helvetica Neue"
+                            FontSize="32"
+                            FontWeight="Bold"
+                            Foreground="White">
+                            <Run Text="Add Answer File" />
+                            <Run
+                                FontSize="14"
+                                FontWeight="Normal"
+                                Foreground="Gray"
+                                Text="(autounattend.xml)" />
+                        </TextBlock>
+                        <!--  Status Text  -->
+                        <TextBlock
+                            x:Name="AddXMLStatusText"
+                            Height="22"
+                            Margin="0,5,0,0"
+                            VerticalAlignment="Bottom"
+                            FontFamily="Helvetica Neue"
+                            FontSize="14"
+                            Foreground="DarkGray"
+                            Text="No Answer File Selected" />
+                    </StackPanel>
+                </DockPanel>
+                <!--  Central Content with Background  -->
+                <Border
+                    Margin="0,5,0,0"
+                    Background="#303030"
+                    CornerRadius="10">
+                    <DockPanel
+                        Width="640"
+                        Height="265"
+                        HorizontalAlignment="Left">
+                        <StackPanel
+                            Width="590"
+                            Height="215"
+                            Margin="20,10,20,10"
+                            Orientation="Vertical">
+                            <!--  Customization Notice  -->
+                            <TextBlock
+                                Margin="0,10,0,5"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                Text="Customize Windows with an autounattend.xml answer file" />
+                            <!--  Separator  -->
+                            <Border
+                                Width="440"
+                                Height="3"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Left"
+                                Background="Gray" />
+                            <!--  Option 1: Download UnattendedWinstall Answer File in a Box  -->
+                            <DockPanel
+                                Width="585"
+                                Margin="0,20,0,0"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="DownloadUWTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Download and Add the Latest UnattendedWinstall Answer File" />
+                                <Button
+                                    x:Name="DownloadUWXMLButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Download UW"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                            <!--  Option 2: Add XML Answer File Manually in a Box  -->
+                            <DockPanel
+                                Margin="0,20,0,10"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="ManualXMLPathTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Select an Answer File to add to the Windows Installation Media" />
+                                <Button
+                                    x:Name="SelectXMLFileButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Select File"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+            <!--  3. Add Drivers Screen Elements  -->
+            <StackPanel
+                x:Name="AddDriversScreen"
+                Width="640"
+                Height="360"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Visibility="Collapsed">
+                <DockPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <!--  Icon  -->
+                    <TextBlock
+                        Width="70"
+                        Height="70"
+                        Margin="0,0,10,0"
+                        DockPanel.Dock="Left"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="68"
+                        FontWeight="ExtraLight"
+                        Foreground="White"
+                        Text="&#xE15E;" />
+                    <!--  StackPanel for Heading and Status Text  -->
+                    <StackPanel VerticalAlignment="Center">
+                        <!--  Heading Text  -->
+                        <TextBlock
+                            Height="35"
+                            VerticalAlignment="Top"
+                            FontFamily="Helvetica Neue"
+                            FontSize="32"
+                            FontWeight="Bold"
+                            Foreground="White"
+                            Text="Add Drivers" />
+                        <!--  Status Text  -->
+                        <TextBlock
+                            x:Name="AddDriversStatusText"
+                            Height="22"
+                            Margin="0,5,0,0"
+                            VerticalAlignment="Bottom"
+                            FontFamily="Helvetica Neue"
+                            FontSize="14"
+                            Foreground="DarkGray"
+                            Text="No Drivers Selected" />
+                    </StackPanel>
+                </DockPanel>
+                <!--  Central Content with Background  -->
+                <Border
+                    Margin="0,5,0,0"
+                    Background="#303030"
+                    CornerRadius="10">
+                    <DockPanel
+                        Width="640"
+                        Height="265"
+                        HorizontalAlignment="Left">
+                        <StackPanel
+                            Width="590"
+                            Height="215"
+                            Margin="20,10,20,10"
+                            Orientation="Vertical">
+                            <!--  Customization Notice  -->
+                            <TextBlock
+                                Margin="0,10,0,5"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                Text="Select drivers to include in your Windows installation" />
+                            <!--  Separator  -->
+                            <Border
+                                Width="400"
+                                Height="3"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Left"
+                                Background="Gray" />
+                            <!--  Option 1: Add Drivers from Current Windows Installation in a Box  -->
+                            <DockPanel
+                                Width="585"
+                                Margin="0,20,0,0"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="AddDriversToImageTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Extract and Add Drivers from Current Windows Installation" />
+                                <Button
+                                    x:Name="AddDriversToImageButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Add Drivers"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                            <!--  Option 2: Add Recommended Drivers in a Box  -->
+                            <DockPanel
+                                Margin="0,20,0,10"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="AddRecDriversTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Add Recommended Storage and Network Drivers (IRST, VMD, WiFi etc.)" />
+                                <Button
+                                    x:Name="AddRecDriversButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Coming Soon"
+                                    FontWeight="SemiBold"
+                                    IsEnabled="False"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+            <!--  4. Create New ISO Screen Elements  -->
+            <StackPanel
+                x:Name="CreateISOScreen"
+                Width="640"
+                Height="360"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Visibility="Collapsed">
+                <DockPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <!--  Icon  -->
+                    <TextBlock
+                        Width="70"
+                        Height="70"
+                        Margin="0,0,10,0"
+                        DockPanel.Dock="Left"
+                        FontFamily="Segoe UI Emoji"
+                        FontSize="68"
+                        FontWeight="Light"
+                        Foreground="White"
+                        Text="&#x1F528;" />
+                    <!--  StackPanel for Heading and Status Text  -->
+                    <StackPanel VerticalAlignment="Center">
+                        <!--  Heading Text  -->
+                        <TextBlock
+                            Height="35"
+                            VerticalAlignment="Top"
+                            FontFamily="Helvetica Neue"
+                            FontSize="32"
+                            FontWeight="Bold"
+                            Foreground="White"
+                            Text="Create New ISO" />
+                        <!--  Status Text  -->
+                        <TextBlock
+                            x:Name="CreateISOStatusText"
+                            Height="22"
+                            Margin="0,5,0,0"
+                            VerticalAlignment="Bottom"
+                            FontFamily="Helvetica Neue"
+                            FontSize="14"
+                            Foreground="DarkGray"
+                            Text="Checking oscdimg status..." />
+                    </StackPanel>
+                </DockPanel>
+                <!--  Central Content with Background  -->
+                <Border
+                    Margin="0,5,0,0"
+                    Background="#303030"
+                    CornerRadius="10">
+                    <DockPanel
+                        Width="640"
+                        Height="265"
+                        HorizontalAlignment="Left">
+                        <StackPanel
+                            Width="590"
+                            Height="215"
+                            Margin="20,10,20,10"
+                            Orientation="Vertical">
+                            <!--  Customization Notice  -->
+                            <TextBlock
+                                Margin="0,10,0,5"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                Text="Finalize your Windows Installation Media" />
+                            <!--  Separator  -->
+                            <Border
+                                Width="315"
+                                Height="3"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Left"
+                                Background="Gray" />
+                            <!--  Option 1: Download oscdimg in a Box  -->
+                            <DockPanel
+                                Width="585"
+                                Margin="0,20,0,0"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="DownloadOscdimgTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Download oscdimg if it's not already installed" />
+                                <Button
+                                    x:Name="GetoscdimgButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Get oscdimg"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                            <!--  Option 2: Select Location in a Box  -->
+                            <DockPanel
+                                Margin="0,20,0,10"
+                                HorizontalAlignment="Left"
+                                LastChildFill="True">
+                                <TextBox
+                                    x:Name="CreateISOTextBox"
+                                    Width="450"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    VerticalContentAlignment="Center"
+                                    Background="#404040"
+                                    BorderBrush="#606060"
+                                    FontStyle="Italic"
+                                    Foreground="LightGray"
+                                    IsReadOnly="True"
+                                    Text=" Select a location to save your Windows Installation Media" />
+                                <Button
+                                    x:Name="SelectISOLocationButton"
+                                    Width="125"
+                                    Height="30"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="Select Location"
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                            </DockPanel>
+                            <!--  Final Create ISO Button at the Bottom  -->
+                            <Button
+                                x:Name="CreateISOButton"
+                                Width="125"
+                                Height="35"
+                                Margin="0,15,0,0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Content="Create ISO"
+                                FontWeight="SemiBold"
+                                IsEnabled="False"
+                                Style="{StaticResource PrimaryButtonStyle}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+            <!--  Buttons for navigating between screens  -->
+            <Button
+                x:Name="NextButton"
+                Width="100"
+                Height="30"
+                Margin="0,0,26,30"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Content="Next"
+                FontWeight="SemiBold"
+                IsEnabled="False"
+                Style="{StaticResource PrimaryButtonStyle}" />
+            <Button
+                x:Name="BackButton"
+                Width="100"
+                Height="30"
+                Margin="0,0,140,30"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Content="Back"
+                FontWeight="SemiBold"
+                IsEnabled="False"
+                Style="{StaticResource PrimaryButtonStyle}" />
+            <!--  Progress Indicator  -->
+            <StackPanel
+                Margin="0,0,0,10"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Orientation="Horizontal">
+                <!--  Step 1  -->
+                <Rectangle
+                    x:Name="ProgressStep1"
+                    Width="153"
+                    Height="5"
+                    Margin="5,0"
+                    Fill="#FFDE00" />
+                <!--  Step 2  -->
+                <Rectangle
+                    x:Name="ProgressStep2"
+                    Width="153"
+                    Height="5"
+                    Margin="5,0"
+                    Fill="#FFEB99" />
+                <!--  Step 3  -->
+                <Rectangle
+                    x:Name="ProgressStep3"
+                    Width="153"
+                    Height="5"
+                    Margin="5,0"
+                    Fill="#FFEB99" />
+                <!--  Step 4  -->
+                <Rectangle
+                    x:Name="ProgressStep4"
+                    Width="153"
+                    Height="5"
+                    Margin="5,0"
+                    Fill="#FFEB99" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
