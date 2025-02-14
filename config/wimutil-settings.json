@@ -1,11 +1,11 @@
 {
     "main": {
-        "xamlUrl": "https://github.com/memstechtips/WIMUtil/raw/main/xaml/WIMUtilGUI.xaml",
+        "xamlUrl": "https://github.com/XLST-Qemu/WIMUtil/raw/main/xaml/WIMUtilGUI.xaml",
         "oscdimgURL": "https://github.com/memstechtips/WIMUtil/raw/main/assets/executables/oscdimg.exe",
         "expectedHash": "CACD23ABCD1E1B791F6280D7D86270FF8D4144728FF611033BAF5599D883731B"
     },
     "dev": {
-        "xamlUrl": "https://github.com/memstechtips/WIMUtil/raw/dev/xaml/WIMUtilGUI.xaml",
+        "xamlUrl": "https://github.com/XLST-Qemu/WIMUtil/raw/main/xaml/WIMUtilGUI.xaml",
         "oscdimgURL": "https://github.com/memstechtips/WIMUtil/raw/dev/assets/executables/oscdimg.exe",
         "expectedHash": "CACD23ABCD1E1B791F6280D7D86270FF8D4144728FF611033BAF5599D883731B"
     },
