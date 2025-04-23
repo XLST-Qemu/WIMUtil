@@ -165,7 +165,7 @@
                             FontSize="32"
                             FontWeight="Bold"
                             Foreground="White"
-                            Text="Select Windows ISO" />
+                            Text="选择 Windows ISO" />
                         <!--  Status Text, aligned at the bottom of the StackPanel  -->
                         <TextBlock
                             x:Name="ExtractISOStatusText"
