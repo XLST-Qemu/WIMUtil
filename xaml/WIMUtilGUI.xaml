@@ -175,7 +175,7 @@
                             FontFamily="Helvetica Neue"
                             FontSize="14"
                             Foreground="DarkGray"
-                            Text="No ISO File Selected" />
+                            Text="未选择 ISO 文件" />
                     </StackPanel>
                 </DockPanel>
                 <Border
@@ -209,7 +209,7 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Select a Windows ISO file on your computer to get started." />
+                                    Text=" 选择计算机上的Windows ISO文件以开始。" />
                                 <Button
                                     x:Name="SelectISOButton"
                                     Width="125"
@@ -237,7 +237,7 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Select a working directory to extract the ISO." />
+                                    Text=" 选择一个工作目录以解压ISO。" />
                                 <Button
                                     x:Name="SelectWorkingDirectoryButton"
                                     Width="125"
