@@ -216,7 +216,7 @@
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Select ISO"
+                                    Content="选择 ISO"
                                     FontWeight="SemiBold"
                                     Style="{StaticResource PrimaryButtonStyle}" />
                             </DockPanel>
@@ -244,7 +244,7 @@
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Select Directory"
+                                    Content="选择目录"
                                     FontWeight="SemiBold"
                                     Style="{StaticResource PrimaryButtonStyle}" />
                             </DockPanel>
@@ -256,7 +256,7 @@
                                 Margin="0,10,0,10"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Content="Start"
+                                Content="开始"
                                 FontWeight="Bold"
                                 IsEnabled="False"
                                 Style="{StaticResource PrimaryButtonStyle}" />
@@ -267,7 +267,7 @@
                                 FontSize="16"
                                 FontWeight="Bold"
                                 Foreground="White"
-                                Text="If you don't have a Windows ISO, you can download one:" />
+                                Text="如果您没有 Windows ISO, 您可以下载一个:" />
                             <!--  Separator  -->
                             <Border
                                 Width="550"
@@ -335,7 +335,7 @@
                             FontSize="32"
                             FontWeight="Bold"
                             Foreground="White">
-                            <Run Text="Add Answer File" />
+                            <Run Text="添加应答文件" />
                             <Run
                                 FontSize="14"
                                 FontWeight="Normal"
@@ -351,7 +351,7 @@
                             FontFamily="Helvetica Neue"
                             FontSize="14"
                             Foreground="DarkGray"
-                            Text="No Answer File Selected" />
+                            Text="未选择应答文件" />
                     </StackPanel>
                 </DockPanel>
                 <!--  Central Content with Background  -->
@@ -374,7 +374,7 @@
                                 FontSize="16"
                                 FontWeight="Bold"
                                 Foreground="White"
-                                Text="Customize Windows with an autounattend.xml answer file" />
+                                Text="使用autounattend.xml应答文件自定义Windows" />
                             <!--  Separator  -->
                             <Border
                                 Width="440"
@@ -399,14 +399,14 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Download and Add the Latest UnattendedWinstall Answer File" />
+                                    Text=" 下载并添加最新无人值守Winstall应答文件" />
                                 <Button
                                     x:Name="DownloadUWXMLButton"
                                     Width="125"
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Download UW"
+                                    Content="下载 UW"
                                     FontWeight="SemiBold"
                                     Style="{StaticResource PrimaryButtonStyle}" />
                             </DockPanel>
@@ -426,14 +426,14 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Select an Answer File to add to the Windows Installation Media" />
+                                    Text=" 选择要添加到Windows安装介质的应答文件" />
                                 <Button
                                     x:Name="SelectXMLFileButton"
                                     Width="125"
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Select File"
+                                    Content="选择文件"
                                     FontWeight="SemiBold"
                                     Style="{StaticResource PrimaryButtonStyle}" />
                             </DockPanel>
@@ -471,7 +471,7 @@
                             FontSize="32"
                             FontWeight="Bold"
                             Foreground="White"
-                            Text="Add Drivers" />
+                            Text="添加驱动" />
                         <!--  Status Text  -->
                         <TextBlock
                             x:Name="AddDriversStatusText"
@@ -481,7 +481,7 @@
                             FontFamily="Helvetica Neue"
                             FontSize="14"
                             Foreground="DarkGray"
-                            Text="No Drivers Selected" />
+                            Text="未选择驱动" />
                     </StackPanel>
                 </DockPanel>
                 <!--  Central Content with Background  -->
@@ -504,7 +504,7 @@
                                 FontSize="16"
                                 FontWeight="Bold"
                                 Foreground="White"
-                                Text="Select drivers to include in your Windows installation" />
+                                Text="选择要包含在Windows安装中的驱动程序" />
                             <!--  Separator  -->
                             <Border
                                 Width="400"
@@ -529,14 +529,14 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Extract and Add Drivers from Current Windows Installation" />
+                                    Text=" 从当前Windows安装中提取和添加驱动程序" />
                                 <Button
                                     x:Name="AddDriversToImageButton"
                                     Width="125"
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Add Drivers"
+                                    Content="添加驱动"
                                     FontWeight="SemiBold"
                                     Style="{StaticResource PrimaryButtonStyle}" />
                             </DockPanel>
@@ -556,14 +556,14 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Add Recommended Storage and Network Drivers (IRST, VMD, WiFi etc.)" />
+                                    Text=" 添加推荐的存储和网络驱动程序（IRST、VMD、WiFi等）" />
                                 <Button
                                     x:Name="AddRecDriversButton"
                                     Width="125"
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Coming Soon"
+                                    Content="即将到来"
                                     FontWeight="SemiBold"
                                     IsEnabled="False"
                                     Style="{StaticResource PrimaryButtonStyle}" />
@@ -602,7 +602,7 @@
                             FontSize="32"
                             FontWeight="Bold"
                             Foreground="White"
-                            Text="Create New ISO" />
+                            Text="创建新的 ISO" />
                         <!--  Status Text  -->
                         <TextBlock
                             x:Name="CreateISOStatusText"
@@ -612,7 +612,7 @@
                             FontFamily="Helvetica Neue"
                             FontSize="14"
                             Foreground="DarkGray"
-                            Text="Checking oscdimg status..." />
+                            Text="检查 oscdimg 状态..." />
                     </StackPanel>
                 </DockPanel>
                 <!--  Central Content with Background  -->
@@ -635,7 +635,7 @@
                                 FontSize="16"
                                 FontWeight="Bold"
                                 Foreground="White"
-                                Text="Finalize your Windows Installation Media" />
+                                Text="完成Windows安装介质" />
                             <!--  Separator  -->
                             <Border
                                 Width="315"
@@ -660,14 +660,14 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Download oscdimg if it's not already installed" />
+                                    Text=" 如果尚未安装oscdimg，请下载它" />
                                 <Button
                                     x:Name="GetoscdimgButton"
                                     Width="125"
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Get oscdimg"
+                                    Content="获取 oscdimg"
                                     FontWeight="SemiBold"
                                     Style="{StaticResource PrimaryButtonStyle}" />
                             </DockPanel>
@@ -687,14 +687,14 @@
                                     FontStyle="Italic"
                                     Foreground="LightGray"
                                     IsReadOnly="True"
-                                    Text=" Select a location to save your Windows Installation Media" />
+                                    Text=" 选择保存Windows安装介质的位置" />
                                 <Button
                                     x:Name="SelectISOLocationButton"
                                     Width="125"
                                     Height="30"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Content="Select Location"
+                                    Content="选择位置"
                                     FontWeight="SemiBold"
                                     Style="{StaticResource PrimaryButtonStyle}" />
                             </DockPanel>
@@ -706,7 +706,7 @@
                                 Margin="0,15,0,0"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Bottom"
-                                Content="Create ISO"
+                                Content="创建 ISO"
                                 FontWeight="SemiBold"
                                 IsEnabled="False"
                                 Style="{StaticResource PrimaryButtonStyle}" />
@@ -722,7 +722,7 @@
                 Margin="0,0,26,30"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
-                Content="Next"
+                Content="下一步"
                 FontWeight="SemiBold"
                 IsEnabled="False"
                 Style="{StaticResource PrimaryButtonStyle}" />
@@ -733,7 +733,7 @@
                 Margin="0,0,140,30"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
-                Content="Back"
+                Content="上一步"
                 FontWeight="SemiBold"
                 IsEnabled="False"
                 Style="{StaticResource PrimaryButtonStyle}" />
